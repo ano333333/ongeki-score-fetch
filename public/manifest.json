@@ -1,0 +1,9 @@
+{
+    "name": "ongeki-score-fetch",
+    "version": "1.0",
+    "manifest_version": 3,
+    "description": "Fetches scores from Ongeki game.",
+    "action": {
+        "default_popup": "src/popup.html"
+    }
+}

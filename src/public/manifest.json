@@ -5,5 +5,7 @@
     "description": "Fetches scores from Ongeki game.",
     "action": {
         "default_popup": "popup.html"
-    }
+    },
+    "host_permissions": ["https://ongeki-net.com/ongeki-mobile/*"],
+    "permissions": ["cookies"]
 }

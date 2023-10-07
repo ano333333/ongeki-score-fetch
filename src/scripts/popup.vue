@@ -21,7 +21,9 @@
         <div class="m-2">
             <buttonVue
                 @click="onclick"
-                :disabled="!isUrlValid || !dataFetcher.isLoginInfoValid"
+                :disabled="
+                    !isUrlValid || !dataFetcher.isLoginInfoValid || isProcessing
+                "
             >
                 スコア情報取得
             </buttonVue>
@@ -79,13 +81,17 @@ import scoreDataType from "./utils/scoreDataType";
 
 const isUrlValid = ref(false);
 const dataFetcher = new dataFetchClass();
+const isProcessing = ref(false);
 
 const datas = ref<scoreDataType[]>([]);
 
 const onclick = async () => {
+    if (isProcessing.value) return;
+    isProcessing.value = true;
     datas.value = (await dataFetcher.fetchScoreDatas()).filter(
         (data) => data.technicalHighScore > 0
     );
+    isProcessing.value = false;
 };
 
 onMounted(() => {

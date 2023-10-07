@@ -3,7 +3,7 @@
         type="button"
         @click="emits('click')"
         :disabled="props.disabled"
-        class="rounded-md px-2.5 py-1.5 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        class="rounded-md px-2.5 py-1.5 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:text-gray-300 disabled:hover:bg-white"
     >
         <slot />
     </button>

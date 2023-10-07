@@ -1,6 +1,6 @@
 <template>
     <!-- TODO:何故かspanの色が全く変わらない -->
-    <div class="rounded-md border border-gray-200 m-2 p-2">
+    <div class="rounded-md border border-gray-200 p-2">
         <span :class="iconClass">{{ iconString }}</span>
         <slot />
     </div>

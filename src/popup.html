@@ -8,14 +8,10 @@
         <div id="app"></div>
         <script type="module">
             import { createApp } from "vue";
-            import { createPinia } from "pinia";
             import "./style.css";
             import popup from "./scripts/popup.vue";
 
-            const app = createApp(popup);
-            const pinia = createPinia();
-            app.use(pinia);
-            app.mount("#app");
+            createApp(popup).mount("#app");
         </script>
     </body>
 </html>

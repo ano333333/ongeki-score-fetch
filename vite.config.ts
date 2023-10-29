@@ -7,6 +7,11 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 popup: "src/popup.html",
+                offscreen: "src/offscreen.html",
+                background: "src/background.ts",
+            },
+            output: {
+                entryFileNames: "[name].js", // 追加: 出力ファイル名を指定
             },
         },
         outDir: "../dist",

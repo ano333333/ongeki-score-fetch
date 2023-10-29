@@ -1,7 +1,7 @@
 export const loginInfoKeys = [
     "_t",
     "segaId",
-    "_ga_92875CKHN5",
+    // "_ga_92875CKHN5",
     "_gcl_au",
     "_gid",
     "friendCodeList",
@@ -12,7 +12,7 @@ export const loginInfoKeys = [
 export type loginInfoKeysType = [
     "_t",
     "segaId",
-    "_ga_92875CKHN5",
+    // "_ga_92875CKHN5",
     "_gcl_au",
     "_gid",
     "friendCodeList",

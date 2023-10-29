@@ -7,5 +7,9 @@
         "default_popup": "popup.html"
     },
     "host_permissions": ["https://ongeki-net.com/ongeki-mobile/*"],
-    "permissions": ["cookies"]
+    "permissions": ["cookies", "storage", "offscreen"],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    }
 }

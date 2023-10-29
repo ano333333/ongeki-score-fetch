@@ -6,24 +6,19 @@
             </alert>
         </div>
         <div class="m-2">
-            <alert v-if="!dataFetcher.isLoginInfoValid" type="error">
+            <alert v-if="!isLoginInfoValid" type="error">
                 ログイン情報が取得できません
             </alert>
         </div>
         <div class="m-2">
-            <alert
-                v-if="isUrlValid && dataFetcher.isLoginInfoValid"
-                type="success"
-            >
+            <alert v-if="isUrlValid && isLoginInfoValid" type="success">
                 情報取得可能です
             </alert>
         </div>
         <div class="m-2">
             <buttonVue
                 @click="onclick"
-                :disabled="
-                    !isUrlValid || !dataFetcher.isLoginInfoValid || isProcessing
-                "
+                :disabled="!isUrlValid || !isLoginInfoValid || isProcessing"
             >
                 スコア情報取得
             </buttonVue>
@@ -76,29 +71,27 @@
 import { onMounted, ref } from "vue";
 import alert from "./components/alert.vue";
 import buttonVue from "./components/button.vue";
-import dataFetchClass from "./utils/dataFetchClass";
 import scoreDataType from "./utils/scoreDataType";
+import localStorageClass from "./utils/localStorageClass";
+import messageToBackgroundType from "./utils/messageToBackgroundType";
 
 const isUrlValid = ref(false);
-const dataFetcher = new dataFetchClass();
 const isProcessing = ref(false);
+const isLoginInfoValid = ref(false);
 
 const datas = ref<scoreDataType[]>([]);
 
 const onclick = async () => {
-    if (isProcessing.value) return;
-    isProcessing.value = true;
-    datas.value = (await dataFetcher.fetchScoreDatas()).filter(
-        (data) => data.technicalHighScore > 0
-    );
-    isProcessing.value = false;
+    await postMessageToBackground({
+        type: "triggerLogic",
+    });
 };
 
 onMounted(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (t) => {
         if (!t[0] || !t[0].url) return;
         const url = t[0].url;
-        // 「https://https://ongeki-net.com/ongeki-mobile/**/~~」の**の部分を取得
+        // 「https://ongeki-net.com/ongeki-mobile/**/~~」の**の部分を取得
         // **が「home、record、event、collection、character、card、friend、ranking」のいずれかならばOK
         const urlRegex =
             /https:\/\/ongeki-net.com\/ongeki-mobile\/(home|record|event|collection|character|card|friend|ranking)\/.*/;
@@ -106,7 +99,29 @@ onMounted(() => {
     });
 });
 
-onMounted(() => {
-    dataFetcher.fetchLoginInfo();
+onMounted(async () => {
+    const v = await localStorageClass.get<boolean>("loginInfoCheck");
+    if (v) isLoginInfoValid.value = true;
+    else {
+        await localStorageClass.addListener(
+            "loginInfoCheck",
+            (newValue: boolean) => {
+                if (newValue) isLoginInfoValid.value = true;
+                console.log("loginInfoCheck", newValue);
+            }
+        );
+        await postMessageToBackground({
+            type: "loginInfoCheck",
+        });
+    }
 });
+
+async function postMessageToBackground(message: messageToBackgroundType) {
+    const toBackgrounds = await localStorageClass.get<
+        messageToBackgroundType[]
+    >("toBackground");
+    await localStorageClass.set({
+        toBackground: [...(toBackgrounds ?? []), message],
+    });
+}
 </script>

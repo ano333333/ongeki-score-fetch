@@ -1,32 +1,25 @@
-import localStorageClass from "./scripts/utils/localStorageClass";
-import messageToBackgroundType from "./scripts/utils/messageToBackgroundType";
 import logicClass from "./scripts/utils/logicClass";
 import runtimeMessageType from "./scripts/utils/runtimeMessageType";
 
-//offscreenからのメッセージを受け取る
-chrome.runtime.onMessage.addListener((message: runtimeMessageType) => {
-    if (message.target !== "background") return;
-    if (message.type === "log") {
-        console.log(`offscreenからのメッセージ:${message.message}`);
-    }
-});
-
-localStorageClass.addListener(
-    "toBackground",
-    (messages: messageToBackgroundType[]) => {
-        if (messages.length !== 0) {
-            const message = messages.pop()!;
-            console.log(`message to background`);
-            console.log(message);
-            localStorageClass.set({ toBackground: messages }).then(async () => {
-                if (message.type === "triggerLogic") {
-                    await logicClass.fetchAndWriteData();
-                } else if (message.type === "loginInfoCheck") {
-                    const check = await logicClass.isLoginInfoValid();
-                    localStorageClass.set({ loginInfoCheck: check });
-                    console.log(`loginInfoCheck: ${check}`);
-                }
+//offscreen,popupからのメッセージを受け取る
+chrome.runtime.onMessage.addListener(
+    (message: runtimeMessageType, _, sendResponse) => {
+        if (message.target !== "background") return;
+        if (message.type === "log") {
+            console.log(`offscreenからのメッセージ:${message.message}`);
+        } else if (message.type === "trigger_logic") {
+            console.log(`popupからのメッセージ:${message}`);
+            logicClass.fetchAndWriteData();
+        } else if (message.type === "login_info_check") {
+            console.log(`popupからのメッセージ:${message}`);
+            logicClass.isLoginInfoValid().then((check) => {
+                sendResponse({
+                    target: "popup",
+                    type: "login_info_result",
+                    result: check,
+                });
             });
         }
+        return true;
     }
 );

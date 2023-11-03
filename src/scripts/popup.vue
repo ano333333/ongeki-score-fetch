@@ -72,8 +72,7 @@ import { onMounted, ref } from "vue";
 import alert from "./components/alert.vue";
 import buttonVue from "./components/button.vue";
 import scoreDataType from "./utils/scoreDataType";
-import localStorageClass from "./utils/localStorageClass";
-import messageToBackgroundType from "./utils/messageToBackgroundType";
+import runtimeMessageType from "./utils/runtimeMessageType";
 
 const isUrlValid = ref(false);
 const isProcessing = ref(false);
@@ -82,8 +81,9 @@ const isLoginInfoValid = ref(false);
 const datas = ref<scoreDataType[]>([]);
 
 const onclick = async () => {
-    await postMessageToBackground({
-        type: "triggerLogic",
+    chrome.runtime.sendMessage({
+        target: "background",
+        type: "trigger_logic",
     });
 };
 
@@ -99,29 +99,18 @@ onMounted(() => {
     });
 });
 
-onMounted(async () => {
-    const v = await localStorageClass.get<boolean>("loginInfoCheck");
-    if (v) isLoginInfoValid.value = true;
-    else {
-        await localStorageClass.addListener(
-            "loginInfoCheck",
-            (newValue: boolean) => {
-                if (newValue) isLoginInfoValid.value = true;
-                console.log("loginInfoCheck", newValue);
-            }
-        );
-        await postMessageToBackground({
-            type: "loginInfoCheck",
+onMounted(() => {
+    chrome.runtime
+        .sendMessage({
+            target: "background",
+            type: "login_info_check",
+        })
+        .then((response: runtimeMessageType) => {
+            if (response.type !== "login_info_result") return false;
+            return response.result;
+        })
+        .then((result) => {
+            isLoginInfoValid.value = result;
         });
-    }
 });
-
-async function postMessageToBackground(message: messageToBackgroundType) {
-    const toBackgrounds = await localStorageClass.get<
-        messageToBackgroundType[]
-    >("toBackground");
-    await localStorageClass.set({
-        toBackground: [...(toBackgrounds ?? []), message],
-    });
-}
 </script>

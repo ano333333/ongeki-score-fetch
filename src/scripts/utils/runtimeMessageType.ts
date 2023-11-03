@@ -23,6 +23,19 @@ type runtimeMessageType =
           target: "background";
           type: "log";
           message: string;
+      }
+    | {
+          target: "background";
+          type: "trigger_logic";
+      }
+    | {
+          target: "background";
+          type: "login_info_check";
+      }
+    | {
+          target: "popup";
+          type: "login_info_result";
+          result: boolean;
       };
 
 export default runtimeMessageType;

@@ -1,4 +1,4 @@
-import logicProgressType from "./logicProgressType";
+import { logicProgressType } from "./logicProgressType";
 
 type localStorageType = {
     logicProgress: logicProgressType[];

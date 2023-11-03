@@ -1,7 +1,7 @@
 import { loginInfoKeys, loginInfoType } from "./loginInfoType";
 import scoreDataType from "./scoreDataType";
 import localStorageClass from "./localStorageClass";
-import logicProgressType from "./logicProgressType";
+import { logicProgressType } from "./logicProgressType";
 import runtimeMessageType from "./runtimeMessageType";
 
 export default class dataFetchClass {
@@ -36,45 +36,45 @@ export default class dataFetchClass {
         );
     }
     public static async startFetching() {
-        try {
-            await this.appendProgress({
+        await this.appendProgress(
+            {
                 type: "progress",
                 message: "スコアデータ取得開始",
+            },
+            true
+        );
+        const loginInfo = await this.fetchLoginInfo();
+        await this.appendProgress({
+            type: "progress",
+            message: "ログイン情報取得完了",
+        });
+        const headers = this.getScoreFetchHeader(loginInfo);
+        const difs: [string, number][] = [
+            ["BASIC", 0],
+            ["ADVANCED", 1],
+            ["EXPERT", 2],
+            ["MASTER", 3],
+            ["LUNATIC", 10],
+        ];
+        const datas: scoreDataType[] = [];
+        for (const dif of difs) {
+            const url = `https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=${dif[1]}`;
+            const response = await fetch(url, {
+                headers,
             });
-            const loginInfo = await this.fetchLoginInfo();
+            const html = await response.text();
+            datas.push(...(await this.sendHTMLToOffscreen(dif[0], html)));
             await this.appendProgress({
                 type: "progress",
-                message: "ログイン情報取得完了",
+                message: `${dif[0]}のスコアデータ取得完了`,
             });
-            const headers = this.getScoreFetchHeader(loginInfo);
-            const difs: [string, number][] = [
-                ["BASIC", 0],
-                ["ADVANCED", 1],
-                ["EXPERT", 2],
-                ["MASTER", 3],
-                ["LUNATIC", 10],
-            ];
-            const datas: scoreDataType[] = [];
-            for (const dif of difs) {
-                const url = `https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=${dif[1]}`;
-                const response = await fetch(url, {
-                    headers,
-                });
-                const html = await response.text();
-                datas.push(...(await this.sendHTMLToOffscreen(dif[0], html)));
-                await this.appendProgress({
-                    type: "progress",
-                    message: `${dif[0]}のスコアデータ取得完了`,
-                });
-                await this.sleep(1000);
-            }
-            await this.appendProgress({
-                type: "finish",
-            });
-            return datas;
-        } catch (e) {
-            throw Error("スコアデータ解析でエラーが発生しました");
+            await this.sleep(1000);
         }
+        await this.appendProgress({
+            type: "progress",
+            message: "全レベルのスコアデータ取得完了",
+        });
+        return datas;
     }
     //offscreenを開き、メッセージを送ってDOMParseさせ、結果を受け取るとresolveする
     private static sendHTMLToOffscreen(diff: string, html: string) {
@@ -151,13 +151,18 @@ export default class dataFetchClass {
         // return `_t=${v._t}; segaId=${v.segaId}; _ga_92875CKHN5=${v._ga_92875CKHN5}; _gcl_au=${v._gcl_au}; _gid=${v._gid}; friendCodeList=${v.friendCodeList}; userId=${v.userId}; _ga_WDQDR0Y1TP=${v._ga_WDQDR0Y1TP}; _ga=${v._ga};`;
         return `_t=${v._t}; segaId=${v.segaId}; _gcl_au=${v._gcl_au}; _gid=${v._gid}; friendCodeList=${v.friendCodeList}; userId=${v.userId}; _ga_WDQDR0Y1TP=${v._ga_WDQDR0Y1TP}; _ga=${v._ga};`;
     }
-    private static async appendProgress(progress: logicProgressType) {
+    //localStorageに進捗を追加
+    //clearがtrueなら進捗をクリアしてから追加
+    private static async appendProgress(
+        progress: logicProgressType,
+        clear: boolean = false
+    ) {
         const progresses =
             (await localStorageClass.get<logicProgressType[]>(
                 "logicProgress"
             )) ?? [];
         await localStorageClass.set({
-            logicProgress: [...progresses, progress],
+            logicProgress: clear ? [progress] : [...progresses, progress],
         });
     }
     private static async sleep(ms: number) {

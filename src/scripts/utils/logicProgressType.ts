@@ -1,14 +1,18 @@
-type logicProgressType =
-    | {
-          type: "progress";
-          message: string;
-      }
-    | {
-          type: "finish";
-      }
-    | {
-          type: "error";
-          message: string;
-      };
+export type logicProgressTypeProgress = {
+    type: "progress";
+    message: string;
+};
 
-export default logicProgressType;
+export type logicProgressTypeFinish = {
+    type: "finish";
+};
+
+export type logicProgressTypeError = {
+    type: "error";
+    message: string;
+};
+
+export type logicProgressType =
+    | logicProgressTypeProgress
+    | logicProgressTypeFinish
+    | logicProgressTypeError;

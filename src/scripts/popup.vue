@@ -24,61 +24,52 @@
             </buttonVue>
         </div>
         <div class="m-2">
-            <table
-                v-if="datas.length > 0"
-                class="border-collapse border border-slate-400"
-            >
-                <thead>
-                    <tr>
-                        <th class="border border-slate-300 bg-gray-200">
-                            曲名
-                        </th>
-                        <th class="border border-slate-300 bg-gray-200">
-                            難易度
-                        </th>
-                        <th class="border border-slate-300 bg-gray-200">
-                            スコア
-                        </th>
-                        <th class="border border-slate-300 bg-gray-200">AB</th>
-                        <th class="border border-slate-300 bg-gray-200">FB</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="data in datas"
-                        :key="`${data.name}_${data.difficulty}`"
-                    >
-                        <td class="border border-slate-300">{{ data.name }}</td>
-                        <td class="border border-slate-300">
-                            {{ data.difficulty }}
-                        </td>
-                        <td class="border border-slate-300">
-                            {{ data.technicalHighScore }}
-                        </td>
-                        <td class="border border-slate-300">
-                            {{ data.allBreak ? "O" : "X" }}
-                        </td>
-                        <td class="border border-slate-300">
-                            {{ data.fullBell ? "O" : "X" }}
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="h-64 overflow-y-auto border rounded border-gray-500">
+                <div
+                    v-for="progress in progresses"
+                    :key="progress.index"
+                    class="m-2"
+                >
+                    <p v-if="progress.type === 'progress'">
+                        {{ (progress as logicProgressTypeProgress).message }}
+                    </p>
+                    <p v-if="progress.type === 'finish'" class="text-green-400">
+                        完了しました
+                    </p>
+                    <p v-if="progress.type === 'error'" class="text-red-400">
+                        {{
+                            "エラーが発生しました:" +
+                            (progress as logicProgressTypeError).message
+                        }}
+                    </p>
+                    <hr v-if="progress.index !== progresses.length - 1" />
+                </div>
+            </div>
         </div>
     </div>
 </template>
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import alert from "./components/alert.vue";
 import buttonVue from "./components/button.vue";
-import scoreDataType from "./utils/scoreDataType";
 import runtimeMessageType from "./utils/runtimeMessageType";
+import {
+    logicProgressTypeError,
+    logicProgressTypeProgress,
+    logicProgressType,
+} from "./utils/logicProgressType";
+import localStorageClass from "./utils/localStorageClass";
 
 const isUrlValid = ref(false);
-const isProcessing = ref(false);
 const isLoginInfoValid = ref(false);
 
-const datas = ref<scoreDataType[]>([]);
+//表示の際のkey属性のために、idを持たせる
+const progresses = ref<(logicProgressType & { index: number })[]>([]);
+//処理中かどうか、progressesの最終要素が"progress"かどうかで判断
+const isProcessing = computed(() => {
+    if (progresses.value.length === 0) return false;
+    return progresses.value[progresses.value.length - 1].type === "progress";
+});
 
 const onclick = async () => {
     chrome.runtime.sendMessage({
@@ -113,4 +104,30 @@ onMounted(() => {
             isLoginInfoValid.value = result;
         });
 });
+
+onMounted(() => {
+    copyLocalStorageLogicProgres();
+});
+
+//localStorageの"logicProgress"を監視し、progress.valueにコピー
+localStorageClass.addListener<logicProgressType[]>("logicProgress", () => {
+    copyLocalStorageLogicProgres();
+});
+
+//localStorageの"logicProgress"の値を、progresses.valueにコピー
+const copyLocalStorageLogicProgres = () => {
+    localStorageClass
+        .get<logicProgressType[]>("logicProgress")
+        .then((value) => {
+            console.log(value);
+            if (!value) {
+                progresses.value = [];
+            } else {
+                progresses.value = value.map((v, i) => ({
+                    ...v,
+                    index: i,
+                }));
+            }
+        });
+};
 </script>

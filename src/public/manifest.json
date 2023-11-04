@@ -10,7 +10,7 @@
         "https://ongeki-net.com/ongeki-mobile/*",
         "https://ongeki-score.net/music"
     ],
-    "permissions": ["cookies", "storage", "offscreen"],
+    "permissions": ["cookies", "storage", "offscreen", "downloads"],
     "background": {
         "service_worker": "background.js",
         "type": "module"

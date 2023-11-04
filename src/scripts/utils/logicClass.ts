@@ -1,13 +1,16 @@
 import dataFetchClass from "./dataFetchClass";
 import localStorageClass from "./localStorageClass";
 import { logicProgressType } from "./logicProgressType";
+import getOutputInterface from "./outputInterfaceFactory";
 
 export default class logicClass {
     public static async fetchAndWriteData() {
         try {
-            const data = await dataFetchClass.startFetching();
+            const datas = await dataFetchClass.startFetching();
             // TODO: スプレッドシートへの書き込みを実装するまでは、console.log
-            console.log(data);
+            console.log(datas);
+            const outputClass = await getOutputInterface();
+            await outputClass.output(datas);
             await this.appendProgress({
                 type: "finish",
             });

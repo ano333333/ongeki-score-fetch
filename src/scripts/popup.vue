@@ -102,7 +102,8 @@ onMounted(() => {
         })
         .then((result) => {
             isLoginInfoValid.value = result;
-        });
+        })
+        .catch();
 });
 
 onMounted(() => {

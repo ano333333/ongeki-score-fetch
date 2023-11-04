@@ -7,9 +7,11 @@ chrome.runtime.onMessage.addListener(
         if (message.target !== "background") return;
         if (message.type === "log") {
             console.log(`offscreenからのメッセージ:${message.message}`);
+            return {};
         } else if (message.type === "trigger_logic") {
             console.log(`popupからのメッセージ:${message}`);
             logicClass.fetchAndWriteData();
+            return {};
         } else if (message.type === "login_info_check") {
             console.log(`popupからのメッセージ:${message}`);
             logicClass.isLoginInfoValid().then((check) => {
@@ -19,7 +21,7 @@ chrome.runtime.onMessage.addListener(
                     result: check,
                 });
             });
+            return true;
         }
-        return true;
     }
 );

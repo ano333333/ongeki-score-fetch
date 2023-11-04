@@ -1,4 +1,5 @@
-type scoreDataType = {
+//オンゲキnetから取得する、ユーザーのスコア情報
+type userScoreDataType = {
     difficulty: string;
     level: string;
     name: string;
@@ -10,4 +11,4 @@ type scoreDataType = {
     allBreak: boolean;
 };
 
-export default scoreDataType;
+export default userScoreDataType;

@@ -6,7 +6,10 @@
     "action": {
         "default_popup": "popup.html"
     },
-    "host_permissions": ["https://ongeki-net.com/ongeki-mobile/*"],
+    "host_permissions": [
+        "https://ongeki-net.com/ongeki-mobile/*",
+        "https://ongeki-score.net/music"
+    ],
     "permissions": ["cookies", "storage", "offscreen"],
     "background": {
         "service_worker": "background.js",

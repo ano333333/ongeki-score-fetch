@@ -1,8 +1,10 @@
 import { loginInfoKeys, loginInfoType } from "./loginInfoType";
-import scoreDataType from "./scoreDataType";
+import userScoreDataType from "./userScoreDataType";
 import localStorageClass from "./localStorageClass";
 import { logicProgressType } from "./logicProgressType";
 import runtimeMessageType from "./runtimeMessageType";
+import scoreConstDataType from "./scoreConstDataType";
+import allScoreDataType from "./allScoreDataType";
 
 export default class dataFetchClass {
     private static async fetchLoginInfo() {
@@ -48,7 +50,8 @@ export default class dataFetchClass {
             type: "progress",
             message: "ログイン情報取得完了",
         });
-        const headers = this.getScoreFetchHeader(loginInfo);
+        //オンゲキnetから、ユーザーデータの取得
+        const headers = this.getUserScoreFetchHeader(loginInfo);
         const difs: [string, number][] = [
             ["BASIC", 0],
             ["ADVANCED", 1],
@@ -56,14 +59,14 @@ export default class dataFetchClass {
             ["MASTER", 3],
             ["LUNATIC", 10],
         ];
-        const datas: scoreDataType[] = [];
+        const userDatas: userScoreDataType[] = [];
         for (const dif of difs) {
             const url = `https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=${dif[1]}`;
             const response = await fetch(url, {
                 headers,
             });
             const html = await response.text();
-            datas.push(...(await this.sendHTMLToOffscreen(dif[0], html)));
+            userDatas.push(...(await this.sendUserScoreHTML(dif[0], html)));
             await this.appendProgress({
                 type: "progress",
                 message: `${dif[0]}のスコアデータ取得完了`,
@@ -74,11 +77,38 @@ export default class dataFetchClass {
             type: "progress",
             message: "全レベルのスコアデータ取得完了",
         });
-        return datas;
+        //ongeki score logから、譜面定数の取得
+        const url = "https://ongeki-score.net/music";
+        const response = await fetch(url);
+        const html = await response.text();
+        const scoreConsts = await this.sendScoreConstHTML(html);
+        await this.appendProgress({
+            type: "progress",
+            message: "譜面定数取得完了",
+        });
+        //取得したデータを結合
+        //scoreConstsを、keyが`${name}#${difficulty}`、valueがscoreConstDataTypeのMapに変換
+        const scoreConstMap = new Map<string, scoreConstDataType>();
+        for (const scoreConst of scoreConsts) {
+            scoreConstMap.set(
+                `${scoreConst.name}#${scoreConst.difficulty}`,
+                scoreConst
+            );
+        }
+        const allScoreDatas: allScoreDataType[] = userDatas.map((userData) => {
+            const scoreConst = scoreConstMap.get(
+                `${userData.name}#${userData.difficulty}`
+            );
+            return {
+                ...userData,
+                const: scoreConst?.const ?? undefined,
+            };
+        });
+        return allScoreDatas;
     }
-    //offscreenを開き、メッセージを送ってDOMParseさせ、結果を受け取るとresolveする
-    private static sendHTMLToOffscreen(diff: string, html: string) {
-        return new Promise<scoreDataType[]>(async (resolve, reject) => {
+    //offscreenを開き、メッセージを送ってユーザーデータHTMLをDOMParseさせ、結果を受け取るとresolveする
+    private static sendUserScoreHTML(diff: string, html: string) {
+        return new Promise<userScoreDataType[]>(async (resolve, reject) => {
             await chrome.offscreen.createDocument({
                 url: chrome.runtime.getURL("offscreen.html"),
                 reasons: [chrome.offscreen.Reason.DOM_PARSER],
@@ -87,7 +117,7 @@ export default class dataFetchClass {
             console.log("created offscreen document");
             const message: runtimeMessageType = {
                 target: "offscreen",
-                type: "domparse_start",
+                type: "user_score_domparse_start",
                 html,
                 diff,
             };
@@ -95,6 +125,30 @@ export default class dataFetchClass {
             await chrome.offscreen.closeDocument();
             console.log("returned to main thread");
             if (response.type === "domparse_end") {
+                resolve(response.datas);
+            } else if (response.type === "domparse_error") {
+                reject(response.error);
+            }
+        });
+    }
+    //offscreenを開き、メッセージを送って譜面定数HTMLをDOMParseさせ、結果を受け取るとresolveする
+    private static sendScoreConstHTML(html: string) {
+        return new Promise<scoreConstDataType[]>(async (resolve, reject) => {
+            await chrome.offscreen.createDocument({
+                url: chrome.runtime.getURL("offscreen.html"),
+                reasons: [chrome.offscreen.Reason.DOM_PARSER],
+                justification: "for DOMParser",
+            });
+            console.log("created offscreen document");
+            const message: runtimeMessageType = {
+                target: "offscreen",
+                type: "score_const_domparse_start",
+                html,
+            };
+            const response = await chrome.runtime.sendMessage(message);
+            await chrome.offscreen.closeDocument();
+            console.log("returned to main thread");
+            if (response.type === "score_const_domparse_end") {
                 resolve(response.datas);
             } else if (response.type === "domparse_error") {
                 reject(response.error);
@@ -120,7 +174,7 @@ export default class dataFetchClass {
             );
         });
     }
-    private static getScoreFetchHeader(loginInfo: loginInfoType) {
+    private static getUserScoreFetchHeader(loginInfo: loginInfoType) {
         const header = new Headers();
         header.append(
             "Accept",

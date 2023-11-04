@@ -9,6 +9,7 @@ export default defineConfig({
                 popup: "src/popup.html",
                 offscreen: "src/offscreen.html",
                 background: "src/background.ts",
+                option: "src/options.html",
             },
             output: {
                 entryFileNames: "[name].js", // 追加: 出力ファイル名を指定

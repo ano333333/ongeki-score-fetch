@@ -68,7 +68,7 @@ export default class dataFetchClass {
                 type: "progress",
                 message: `${dif[0]}のスコアデータ取得完了`,
             });
-            await this.sleep(1000);
+            await this.sleep(5000);
         }
         await this.appendProgress({
             type: "progress",

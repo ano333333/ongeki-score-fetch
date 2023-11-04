@@ -52,8 +52,8 @@ async function log(message: string) {
 
 //recordsページのHTMLを受け取り、楽曲データを返す
 async function parseRecordsHTML(dif: string, html: string) {
-    const { JSDOM } = await import("jsdom");
-    const doc = new JSDOM(html).window.document;
+    const domparser = new DOMParser();
+    const doc = domparser.parseFromString(html, "text/html");
     if (doc.getElementsByTagName("parseerror").length) {
         throw new Error("HTML Parse Error");
     }

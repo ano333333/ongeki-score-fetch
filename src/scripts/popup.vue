@@ -111,8 +111,10 @@ onMounted(() => {
 });
 
 //localStorageの"logicProgress"を監視し、progress.valueにコピー
-localStorageClass.addListener<logicProgressType[]>("logicProgress", () => {
-    copyLocalStorageLogicProgres();
+onMounted(() => {
+    localStorageClass.addLogicProgressListener(() => {
+        copyLocalStorageLogicProgres();
+    });
 });
 
 //localStorageの"logicProgress"の値を、progresses.valueにコピー

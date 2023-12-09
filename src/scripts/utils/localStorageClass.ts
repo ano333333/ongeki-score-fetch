@@ -7,20 +7,6 @@ import { optionDataType, outputType } from "./optionDataType";
 // };
 
 export default class localStorageClass {
-    public static addListener<T>(
-        key: string,
-        callback: (newValue: T, oldValue: T) => void
-    ) {
-        chrome.storage.onChanged.addListener((changes, area) => {
-            if (area !== "local") {
-                return;
-            }
-            if (changes.hasOwnProperty(key)) {
-                const { newValue, oldValue } = changes[key];
-                callback(newValue, oldValue);
-            }
-        });
-    }
     public static async getOptionData() {
         const defaultOption = {
             outputType: outputType.download,
@@ -58,6 +44,11 @@ export default class localStorageClass {
             return false;
         }
     }
+    public static addLogicProgressListener(callback: () => void) {
+        this.addListener<logicProgressType[]>("logicProgress", () => {
+            callback();
+        });
+    }
     private static get<T>(key: string) {
         return new Promise<T | undefined>((resolve, reject) => {
             try {
@@ -81,6 +72,20 @@ export default class localStorageClass {
                 });
             } catch (e) {
                 reject(e);
+            }
+        });
+    }
+    private static addListener<T>(
+        key: string,
+        callback: (newValue: T, oldValue: T) => void
+    ) {
+        chrome.storage.onChanged.addListener((changes, area) => {
+            if (area !== "local") {
+                return;
+            }
+            if (changes.hasOwnProperty(key)) {
+                const { newValue, oldValue } = changes[key];
+                callback(newValue, oldValue);
             }
         });
     }

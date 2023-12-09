@@ -63,9 +63,9 @@ onMounted(() => {
 });
 
 //localStorageを監視し、logicProgressに変更があればisProcessingを更新
-localStorageClass.addListener("logicProgress", () => {
-    localStorageClass.isLogicProcessing().then((value) => {
-        isProcessing.value = value;
+onMounted(() => {
+    localStorageClass.addLogicProgressListener(async () => {
+        isProcessing.value = await localStorageClass.isLogicProcessing();
     });
 });
 

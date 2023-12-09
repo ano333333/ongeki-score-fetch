@@ -1,5 +1,5 @@
 import localStorageClass from "./localStorageClass";
-import { outputType, optionDataType } from "./optionDataType";
+import { outputType } from "./optionDataType";
 import downloadOutputClass from "./downloadOutputClass";
 
 const optionDataOutputInterfaceMap = new Map([
@@ -8,12 +8,7 @@ const optionDataOutputInterfaceMap = new Map([
 
 //localStorageのoptionDataに従い、出力に用いるoutputInterfaceの子クラスを返す
 async function getOutputInterface() {
-    const optiondata = await localStorageClass.get<optionDataType>(
-        "optionData"
-    );
-    if (!optiondata) {
-        throw new Error("オプションが未設定です");
-    }
+    const optiondata = await localStorageClass.getOptionData();
     console.log(optiondata);
     const t = optionDataOutputInterfaceMap.get(optiondata.outputType);
     console.log(t);

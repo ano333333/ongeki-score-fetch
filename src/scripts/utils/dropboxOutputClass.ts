@@ -79,33 +79,38 @@ class dropboxOutputClass extends outputInterface {
             code_challenge_method: "S256",
             redirect_uri: `chrome-extension://${chrome.runtime.id}/redirect.html`,
         };
-        //dropboxの認証ページを開く
-        return chrome.tabs
+        //dropboxの認証ページをポップアップウィンドウで開く
+        return chrome.windows
             .create({
                 url: `${url}?${new URLSearchParams(params)}`,
+                type: "popup",
+                width: 600,
+                height: 800,
             })
-            .then((tab) => {
-                //tabがこの拡張機能のリダイレクトページに行くまで待つ
+            .then((window) => {
+                //ポップアップウィンドウのタブIDを取得
+                const tabId = window.tabs![0].id!;
+                //ポップアップウィンドウがこの拡張機能のリダイレクトページに行くまで待つ
                 return new Promise<string>((resolve, reject) => {
-                    //拡張機能のリダイレクトページに行く前にこのタブが閉じられたらエラー
-                    const removeListener = (tabId: number) => {
-                        if (tabId === tab.id) {
-                            chrome.tabs.onRemoved.removeListener(
+                    //拡張機能のリダイレクトページに行く前にこのウィンドウが閉じられたらエラー
+                    const removeListener = (windowId: number) => {
+                        if (windowId === window.id) {
+                            chrome.windows.onRemoved.removeListener(
                                 removeListener
+                            );
+                            chrome.tabs.onUpdated.removeListener(
+                                updateListener
                             );
                             reject(
                                 new AuthorizationError(
-                                    "認証タブが閉じられました"
+                                    "認証ウィンドウが閉じられました"
                                 )
                             );
                         }
                     };
-                    chrome.tabs.onRemoved.addListener(removeListener);
-                    const updateListener = (tabId: number, changeInfo: any) => {
-                        if (
-                            tabId === tab.id &&
-                            changeInfo.status === "loading"
-                        ) {
+                    chrome.windows.onRemoved.addListener(removeListener);
+                    const updateListener = (id: number, changeInfo: any) => {
+                        if (id === tabId && changeInfo.status === "loading") {
                             const url = new URL(changeInfo.url);
                             console.log(url);
                             if (
@@ -117,7 +122,7 @@ class dropboxOutputClass extends outputInterface {
                                 chrome.tabs.onUpdated.removeListener(
                                     updateListener
                                 );
-                                chrome.tabs.onRemoved.removeListener(
+                                chrome.windows.onRemoved.removeListener(
                                     removeListener
                                 );
                                 const code = url.searchParams.get("code");

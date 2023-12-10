@@ -11,15 +11,26 @@ type dropboxTokenIssueResponseType = {
     scope: string;
 };
 
+//認証エラーを表す方
+class AuthorizationError extends Error {}
+
 class dropboxOutputClass extends outputInterface {
     public static async output(datas: allScoreDataType[]) {
         console.log("dropboxOutputClass.output");
+        await localStorageClass.appendLogicProgress({
+            type: "progress",
+            message: "dropboxへの認証開始",
+        });
         const { code_challenge, code_verifier } =
             await this.generateCodeVerifier();
         const authorization_code = await this.waitForAuthorize(code_challenge);
         console.log(`authorization_code: ${authorization_code}`);
         const token = await this.issueToken(authorization_code, code_verifier);
         console.log(`token: ${JSON.stringify(token)}`);
+        await localStorageClass.appendLogicProgress({
+            type: "progress",
+            message: "dropboxへの認証完了",
+        });
         await localStorageClass.setDropboxData({
             access_token: token.access_token,
             refresh_token: token.access_token,
@@ -75,37 +86,56 @@ class dropboxOutputClass extends outputInterface {
             })
             .then((tab) => {
                 //tabがこの拡張機能のリダイレクトページに行くまで待つ
-                return new Promise<{ tabId: number; code: string }>(
-                    (resolve) => {
-                        const listener = (tabId: number, changeInfo: any) => {
+                return new Promise<string>((resolve, reject) => {
+                    //拡張機能のリダイレクトページに行く前にこのタブが閉じられたらエラー
+                    const removeListener = (tabId: number) => {
+                        if (tabId === tab.id) {
+                            chrome.tabs.onRemoved.removeListener(
+                                removeListener
+                            );
+                            reject(
+                                new AuthorizationError(
+                                    "認証タブが閉じられました"
+                                )
+                            );
+                        }
+                    };
+                    chrome.tabs.onRemoved.addListener(removeListener);
+                    const updateListener = (tabId: number, changeInfo: any) => {
+                        if (
+                            tabId === tab.id &&
+                            changeInfo.status === "loading"
+                        ) {
+                            const url = new URL(changeInfo.url);
+                            console.log(url);
                             if (
-                                tabId === tab.id &&
-                                changeInfo.status === "loading"
+                                url.host === chrome.runtime.id &&
+                                url.pathname === "/redirect.html"
                             ) {
-                                const url = new URL(changeInfo.url);
-                                if (
-                                    url.host === chrome.runtime.id &&
-                                    url.pathname === "/redirect.html"
-                                ) {
-                                    chrome.tabs.onUpdated.removeListener(
-                                        listener
+                                //リダイレクトしたので、タブを閉じる
+                                chrome.tabs.remove(tabId);
+                                chrome.tabs.onUpdated.removeListener(
+                                    updateListener
+                                );
+                                chrome.tabs.onRemoved.removeListener(
+                                    removeListener
+                                );
+                                const code = url.searchParams.get("code");
+                                //認証ページでキャンセルが押されると、codeがnullになる
+                                if (!code) {
+                                    reject(
+                                        new AuthorizationError(
+                                            "認証がキャンセルされました"
+                                        )
                                     );
-                                    resolve({
-                                        tabId: tab.id,
-                                        code:
-                                            url.searchParams.get("code") ?? "",
-                                    });
+                                } else {
+                                    resolve(code);
                                 }
                             }
-                        };
-                        chrome.tabs.onUpdated.addListener(listener);
-                    }
-                );
-            })
-            .then(({ tabId, code }) => {
-                //codeを取得したので、認証ページを閉じる
-                chrome.tabs.remove(tabId);
-                return code;
+                        }
+                    };
+                    chrome.tabs.onUpdated.addListener(updateListener);
+                });
             });
     }
 
@@ -136,7 +166,7 @@ class dropboxOutputClass extends outputInterface {
         console.log(JSON.stringify(json));
         // fetch失敗ならエラー
         if (!response.ok) {
-            throw new Error(
+            throw new AuthorizationError(
                 `dropboxへのアクセスに失敗しました。ステータスコード: ${response.status}`
             );
         }
@@ -207,7 +237,7 @@ class dropboxOutputClass extends outputInterface {
         // fetch失敗ならエラー
         if (!response.ok) {
             console.log(JSON.stringify(response_data));
-            throw new Error(
+            throw new AuthorizationError(
                 `dropboxへのアクセスに失敗しました。ステータスコード: ${response.status}`
             );
         }

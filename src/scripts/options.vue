@@ -48,7 +48,10 @@ import { onMounted, ref } from "vue";
 
 const optionData = ref<optionDataType>();
 
-const outputTypeList = [{ value: outputType.download, text: "ダウンロード" }];
+const outputTypeList = [
+    { value: outputType.download, text: "ダウンロード" },
+    { value: outputType.dropbox, text: "Dropbox" },
+];
 
 const isProcessing = ref(true);
 

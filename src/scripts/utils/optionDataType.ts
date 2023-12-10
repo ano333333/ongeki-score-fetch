@@ -1,5 +1,6 @@
 export enum outputType {
     download = "download",
+    dropbox = "dropbox",
 }
 
 export type optionDataType = {

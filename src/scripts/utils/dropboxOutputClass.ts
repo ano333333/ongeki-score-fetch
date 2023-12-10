@@ -20,11 +20,9 @@ class dropboxOutputClass extends outputInterface {
         console.log(`authorization_code: ${authorization_code}`);
         const token = await this.issueToken(authorization_code, code_verifier);
         console.log(`token: ${JSON.stringify(token)}`);
-        await localStorageClass.set({
-            dropboxStorageData: {
-                access_token: token.access_token,
-                refresh_token: token.access_token,
-            },
+        await localStorageClass.setDropboxData({
+            access_token: token.access_token,
+            refresh_token: token.access_token,
         });
         await this.saveToDropbox(
             token.access_token,

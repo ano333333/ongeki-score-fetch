@@ -1,7 +1,6 @@
 import { loginInfoKeys, loginInfoType } from "./loginInfoType";
 import userScoreDataType from "./userScoreDataType";
 import localStorageClass from "./localStorageClass";
-import { logicProgressType } from "./logicProgressType";
 import runtimeMessageType from "./runtimeMessageType";
 import scoreConstDataType from "./scoreConstDataType";
 import allScoreDataType from "./allScoreDataType";
@@ -38,15 +37,13 @@ export default class dataFetchClass {
         );
     }
     public static async startFetching() {
-        await this.appendProgress(
-            {
-                type: "progress",
-                message: "スコアデータ取得開始",
-            },
-            true
-        );
+        await localStorageClass.clearLogicProgress();
+        await localStorageClass.appendLogicProgress({
+            type: "progress",
+            message: "スコアデータ取得開始",
+        });
         const loginInfo = await this.fetchLoginInfo();
-        await this.appendProgress({
+        await localStorageClass.appendLogicProgress({
             type: "progress",
             message: "ログイン情報取得完了",
         });
@@ -67,13 +64,13 @@ export default class dataFetchClass {
             });
             const html = await response.text();
             userDatas.push(...(await this.sendUserScoreHTML(dif[0], html)));
-            await this.appendProgress({
+            await localStorageClass.appendLogicProgress({
                 type: "progress",
                 message: `${dif[0]}のスコアデータ取得完了`,
             });
             await this.sleep(5000);
         }
-        await this.appendProgress({
+        await localStorageClass.appendLogicProgress({
             type: "progress",
             message: "全レベルのスコアデータ取得完了",
         });
@@ -82,7 +79,7 @@ export default class dataFetchClass {
         const response = await fetch(url);
         const html = await response.text();
         const scoreConsts = await this.sendScoreConstHTML(html);
-        await this.appendProgress({
+        await localStorageClass.appendLogicProgress({
             type: "progress",
             message: "譜面定数取得完了",
         });
@@ -204,20 +201,6 @@ export default class dataFetchClass {
         const v = info;
         // return `_t=${v._t}; segaId=${v.segaId}; _ga_92875CKHN5=${v._ga_92875CKHN5}; _gcl_au=${v._gcl_au}; _gid=${v._gid}; friendCodeList=${v.friendCodeList}; userId=${v.userId}; _ga_WDQDR0Y1TP=${v._ga_WDQDR0Y1TP}; _ga=${v._ga};`;
         return `_t=${v._t}; segaId=${v.segaId}; _gcl_au=${v._gcl_au}; _gid=${v._gid}; friendCodeList=${v.friendCodeList}; userId=${v.userId}; _ga_WDQDR0Y1TP=${v._ga_WDQDR0Y1TP}; _ga=${v._ga};`;
-    }
-    //localStorageに進捗を追加
-    //clearがtrueなら進捗をクリアしてから追加
-    private static async appendProgress(
-        progress: logicProgressType,
-        clear: boolean = false
-    ) {
-        const progresses =
-            (await localStorageClass.get<logicProgressType[]>(
-                "logicProgress"
-            )) ?? [];
-        await localStorageClass.set({
-            logicProgress: clear ? [progress] : [...progresses, progress],
-        });
     }
     private static async sleep(ms: number) {
         return new Promise((resolve) => setTimeout(resolve, ms));

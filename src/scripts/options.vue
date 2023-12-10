@@ -42,7 +42,6 @@
 </template>
 <script setup lang="ts">
 import localStorageClass from "./utils/localStorageClass";
-import { logicProgressType } from "./utils/logicProgressType";
 import { optionDataType, outputType } from "./utils/optionDataType";
 import { onMounted, ref } from "vue";
 
@@ -56,45 +55,27 @@ const outputTypeList = [
 const isProcessing = ref(true);
 
 onMounted(async () => {
-    const data = await localStorageClass.get<optionDataType>("optionData");
-    if (data) {
-        optionData.value = data;
-    } else {
-        const defaultOption = {
-            outputType: outputType.download,
-        };
-        optionData.value = defaultOption;
-        await localStorageClass.set({ optionData: defaultOption });
-    }
+    const data = await localStorageClass.getOptionData();
+    optionData.value = data;
 });
 
 onMounted(() => {
-    getIsProcessing().then((value) => {
+    localStorageClass.isLogicProcessing().then((value) => {
         isProcessing.value = value;
     });
 });
 
 //localStorageを監視し、logicProgressに変更があればisProcessingを更新
-localStorageClass.addListener("logicProgress", () => {
-    getIsProcessing().then((value) => {
-        isProcessing.value = value;
+onMounted(() => {
+    localStorageClass.addLogicProgressListener(async () => {
+        isProcessing.value = await localStorageClass.isLogicProcessing();
     });
 });
 
 //「保存」ボタンのクリックイベント
 const saveOnClick = () => {
-    localStorageClass.set({ optionData: optionData.value });
-};
-
-//localStorageからlogicProgressを取得し、処理中かどうかを返す
-async function getIsProcessing() {
-    const progresses = await localStorageClass.get<logicProgressType[]>(
-        "logicProgress"
-    );
-    if (progresses) {
-        return progresses[progresses.length - 1].type === "progress";
-    } else {
-        return false;
+    if (optionData.value !== undefined) {
+        localStorageClass.setOptionData(optionData.value);
     }
-}
+};
 </script>

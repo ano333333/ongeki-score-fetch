@@ -111,24 +111,24 @@ onMounted(() => {
 });
 
 //localStorageの"logicProgress"を監視し、progress.valueにコピー
-localStorageClass.addListener<logicProgressType[]>("logicProgress", () => {
-    copyLocalStorageLogicProgres();
+onMounted(() => {
+    localStorageClass.addLogicProgressListener(() => {
+        copyLocalStorageLogicProgres();
+    });
 });
 
 //localStorageの"logicProgress"の値を、progresses.valueにコピー
 const copyLocalStorageLogicProgres = () => {
-    localStorageClass
-        .get<logicProgressType[]>("logicProgress")
-        .then((value) => {
-            console.log(value);
-            if (!value) {
-                progresses.value = [];
-            } else {
-                progresses.value = value.map((v, i) => ({
-                    ...v,
-                    index: i,
-                }));
-            }
-        });
+    localStorageClass.getLogicProgress().then((value) => {
+        console.log(value);
+        if (!value) {
+            progresses.value = [];
+        } else {
+            progresses.value = value.map((v, i) => ({
+                ...v,
+                index: i,
+            }));
+        }
+    });
 };
 </script>

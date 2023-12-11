@@ -5,7 +5,7 @@ import { optionDataType, outputType } from "./optionDataType";
 // type localStorageType = {
 //     logicProgress: logicProgressType[];
 //     optionData: optionDataType;
-//     dropboxData: dropboxStorageDataType;
+//     dropboxData?: dropboxStorageDataType;
 // };
 
 export default class localStorageClass {
@@ -53,7 +53,7 @@ export default class localStorageClass {
         });
     }
     public static async getDropboxData() {
-        return await this.get("dropboxData");
+        return await this.get<dropboxStorageDataType>("dropboxData");
     }
     public static async setDropboxData(data: dropboxStorageDataType) {
         await this.set({

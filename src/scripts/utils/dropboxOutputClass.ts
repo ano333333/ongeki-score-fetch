@@ -4,7 +4,7 @@ import localStorageClass from "./localStorageClass";
 
 type dropboxTokenIssueResponseType = {
     access_token: string;
-    expires: number;
+    expires_in: number;
     token_type: "bearer";
     uid: string;
     account_id: string;
@@ -21,30 +21,30 @@ class dropboxOutputClass extends outputInterface {
             type: "progress",
             message: "dropboxへの認証開始",
         });
-        const { code_challenge, code_verifier } =
-            await this.generateCodeVerifier();
-        const authorization_code = await this.waitForAuthorize(code_challenge);
-        console.log(`authorization_code: ${authorization_code}`);
-        const token = await this.issueToken(authorization_code, code_verifier);
-        console.log(`token: ${JSON.stringify(token)}`);
+        const accessToken =
+            (await this.storedAccessToken()) ?? (await this.executePKCEFlow());
         await localStorageClass.appendLogicProgress({
             type: "progress",
             message: "dropboxへの認証完了",
-        });
-        await localStorageClass.setDropboxData({
-            access_token: token.access_token,
-            refresh_token: token.access_token,
         });
         console.log(
             `path: ${(await localStorageClass.getOptionData()).outputPath}`
         );
         await this.saveToDropbox(
-            token.access_token,
+            accessToken,
             this.convertToCsv(datas),
             (
                 await localStorageClass.getOptionData()
             ).outputPath
         );
+    }
+    //local Storageに有効なaccess tokenがあればそれを返す
+    private static async storedAccessToken() {
+        const data = await localStorageClass.getDropboxData();
+        if (data && data.expires > Math.floor(Date.now() / 1000)) {
+            return data.access_token;
+        }
+        return undefined;
     }
     //S256でcode challengeとcode verifierを生成
     private static async generateCodeVerifier() {
@@ -148,7 +148,6 @@ class dropboxOutputClass extends outputInterface {
                 });
             });
     }
-
     //authorization codeを用いてaccess tokenなど認証情報を取得
     private static async issueToken(
         authorization_code: string,
@@ -184,7 +183,21 @@ class dropboxOutputClass extends outputInterface {
         console.log(`response_data: ${JSON.stringify(response_data)}`);
         return response_data;
     }
-
+    //認証からアクセストークン発行、ローカルに保存するまでのフローを実行する
+    private static async executePKCEFlow() {
+        const { code_challenge, code_verifier } =
+            await this.generateCodeVerifier();
+        const authorization_code = await this.waitForAuthorize(code_challenge);
+        console.log(`authorization_code: ${authorization_code}`);
+        const token = await this.issueToken(authorization_code, code_verifier);
+        console.log(`token: ${JSON.stringify(token)}`);
+        const expires = Math.floor(Date.now() / 1000) + token.expires_in;
+        await localStorageClass.setDropboxData({
+            access_token: token.access_token,
+            expires,
+        });
+        return token.access_token;
+    }
     private static convertToCsv(datas: allScoreDataType[]): string {
         const header = [
             "曲名",

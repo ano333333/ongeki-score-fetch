@@ -5,4 +5,5 @@ export enum outputType {
 
 export type optionDataType = {
     outputType: outputType;
+    outputPath: string;
 };

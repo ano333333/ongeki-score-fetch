@@ -12,6 +12,7 @@ export default class localStorageClass {
     public static async getOptionData() {
         const defaultOption = {
             outputType: outputType.download,
+            outputPath: "ongeki-score-fetch/data.csv",
         };
         return (await this.get<optionDataType>("optionData")) ?? defaultOption;
     }

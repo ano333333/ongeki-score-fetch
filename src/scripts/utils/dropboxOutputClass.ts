@@ -35,10 +35,15 @@ class dropboxOutputClass extends outputInterface {
             access_token: token.access_token,
             refresh_token: token.access_token,
         });
+        console.log(
+            `path: ${(await localStorageClass.getOptionData()).outputPath}`
+        );
         await this.saveToDropbox(
             token.access_token,
             this.convertToCsv(datas),
-            this.filename()
+            (
+                await localStorageClass.getOptionData()
+            ).outputPath
         );
     }
     //S256でcode challengeとcode verifierを生成
@@ -209,11 +214,6 @@ class dropboxOutputClass extends outputInterface {
         );
         return [header, ...rows].join("\n");
     }
-
-    private static filename() {
-        return `/ongeki-score-data.csv`;
-    }
-
     private static async saveToDropbox(
         access_token: string,
         csv: string,
@@ -225,7 +225,8 @@ class dropboxOutputClass extends outputInterface {
             Authorization: `Bearer ${access_token}`,
             "Content-Type": "application/octet-stream",
             "Dropbox-API-Arg": JSON.stringify({
-                path,
+                //オプション画面側では"/"始まりではないため、ここで付ける
+                path: "/" + path,
                 mode: "overwrite",
                 autorename: true,
                 mute: false,
@@ -238,16 +239,14 @@ class dropboxOutputClass extends outputInterface {
             body: csv,
         });
 
-        const response_data = await response.json();
         // fetch失敗ならエラー
         if (!response.ok) {
-            console.log(JSON.stringify(response_data));
+            console.log(response);
             throw new AuthorizationError(
                 `dropboxへのアクセスに失敗しました。ステータスコード: ${response.status}`
             );
         }
-        console.log(`response_data: ${JSON.stringify(response_data)}`);
-        return response_data;
+        return response.json();
     }
     private static client_id = "5bx5uvxl8iqp60a";
 }

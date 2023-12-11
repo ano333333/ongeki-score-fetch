@@ -15,7 +15,6 @@ export default class logicClass {
                 type: "progress",
                 message: "データ取得完了",
             });
-            console.log(datas);
             const outputClass = await getOutputInterface();
             await localStorageClass.appendLogicProgress({
                 type: "progress",

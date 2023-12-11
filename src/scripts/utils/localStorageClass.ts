@@ -1,15 +1,18 @@
+import dropboxStorageDataType from "./dropboxStorageDataType";
 import { logicProgressType } from "./logicProgressType";
 import { optionDataType, outputType } from "./optionDataType";
 
 // type localStorageType = {
 //     logicProgress: logicProgressType[];
 //     optionData: optionDataType;
+//     dropboxData?: dropboxStorageDataType;
 // };
 
 export default class localStorageClass {
     public static async getOptionData() {
         const defaultOption = {
             outputType: outputType.download,
+            outputPath: "ongeki-score-fetch/data.csv",
         };
         return (await this.get<optionDataType>("optionData")) ?? defaultOption;
     }
@@ -47,6 +50,14 @@ export default class localStorageClass {
     public static addLogicProgressListener(callback: () => void) {
         this.addListener<logicProgressType[]>("logicProgress", () => {
             callback();
+        });
+    }
+    public static async getDropboxData() {
+        return await this.get<dropboxStorageDataType>("dropboxData");
+    }
+    public static async setDropboxData(data: dropboxStorageDataType) {
+        await this.set({
+            dropboxData: data,
         });
     }
     private static get<T>(key: string) {

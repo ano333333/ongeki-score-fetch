@@ -37,7 +37,6 @@ export default class dataFetchClass {
         );
     }
     public static async startFetching() {
-        await localStorageClass.clearLogicProgress();
         await localStorageClass.appendLogicProgress({
             type: "progress",
             message: "スコアデータ取得開始",
@@ -66,13 +65,13 @@ export default class dataFetchClass {
             userDatas.push(...(await this.sendUserScoreHTML(dif[0], html)));
             await localStorageClass.appendLogicProgress({
                 type: "progress",
-                message: `${dif[0]}のスコアデータ取得完了`,
+                message: `${dif[0]}のユーザースコアデータ取得完了`,
             });
             await this.sleep(5000);
         }
         await localStorageClass.appendLogicProgress({
             type: "progress",
-            message: "全レベルのスコアデータ取得完了",
+            message: "全レベルのユーザースコアデータ取得完了",
         });
         //ongeki score logから、譜面定数の取得
         const url = "https://ongeki-score.net/music";

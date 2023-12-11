@@ -5,10 +5,21 @@ import getOutputInterface from "./outputInterfaceFactory";
 export default class logicClass {
     public static async fetchAndWriteData() {
         try {
+            await localStorageClass.clearLogicProgress();
+            await localStorageClass.appendLogicProgress({
+                type: "progress",
+                message: "開始",
+            });
             const datas = await dataFetchClass.startFetching();
-            // TODO: スプレッドシートへの書き込みを実装するまでは、console.log
-            console.log(datas);
+            await localStorageClass.appendLogicProgress({
+                type: "progress",
+                message: "データ取得完了",
+            });
             const outputClass = await getOutputInterface();
+            await localStorageClass.appendLogicProgress({
+                type: "progress",
+                message: "出力開始",
+            });
             await outputClass.output(datas);
             await localStorageClass.appendLogicProgress({
                 type: "finish",

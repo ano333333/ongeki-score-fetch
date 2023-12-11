@@ -1,17 +1,18 @@
 import localStorageClass from "./localStorageClass";
 import { outputType } from "./optionDataType";
+import outputInterface from "./outputInterface";
 import downloadOutputClass from "./downloadOutputClass";
+import dropboxOutputClass from "./dropboxOutputClass";
 
-const optionDataOutputInterfaceMap = new Map([
-    [outputType.download, downloadOutputClass],
-]);
+const optionDataOutputInterfaceMap = {
+    [outputType.download]: downloadOutputClass,
+    [outputType.dropbox]: dropboxOutputClass,
+};
 
 //localStorageのoptionDataに従い、出力に用いるoutputInterfaceの子クラスを返す
-async function getOutputInterface() {
+async function getOutputInterface(): Promise<typeof outputInterface> {
     const optiondata = await localStorageClass.getOptionData();
-    console.log(optiondata);
-    const t = optionDataOutputInterfaceMap.get(optiondata.outputType);
-    console.log(t);
+    const t = optionDataOutputInterfaceMap[optiondata.outputType];
     if (!t) {
         throw new Error(
             `内部エラー: class extending outputInterface is not found for ${optiondata.outputType}`

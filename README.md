@@ -1,18 +1,53 @@
-# Vue 3 + TypeScript + Vite
+# ongeki-score-fetch
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+## 概要
 
-## Recommended IDE Setup
+オンゲキマイページから、自身の全譜面のスコアデータを取得するためのChrome拡張機能です。
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+## 使用イメージ
 
-## Type Support For `.vue` Imports in TS
+![使用動画](./readme/use_image.gif)
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+## 取得データ内容
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+以下のように、BASIC~LUNATIC全譜面の
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+- 曲名
+- 難易度
+- レベル
+- 譜面定数
+- ジャンル
+- テクニカルハイスコア
+- オーバーダメージハイスコア
+- バトルハイスコア
+- All Break
+- Full Bell
+
+をCSV形式で出力します。
+
+```csv
+曲名,難易度,レベル,譜面定数,ジャンル,テクニカルハイスコア,オーバーダメージハイスコア,バトルハイスコア,All Break,Full Bell
+ハートサーモグラフィー,MASTER,12+,12.7,POPS＆ANIME,1010000,552.15,10078098,true,true
+偉大なる悪魔は実は大天使パトラちゃん様なのだ！,MASTER,13+,13.7,POPS＆ANIME,1010000,543.15,9919301,true,true
+えんじぇる♡ピタゴリ☆ほーみたい！,MASTER,12+,12.8,POPS＆ANIME,0,0,0,false,false
+プラネタリウム・レヴュー,MASTER,12,12.2,POPS＆ANIME,1010000,666.39,9758498,true,true
+```
+
+## 拡張機能のインストール方法
+
+1. Releasesより`ongeki-score-fetch.zip`をダウンロード
+2. ダウンロードした`ongeki-score-fetch.zip`を解凍
+3. Chromeの拡張機能ページに移動
+4. 右上の歯車アイコンをクリックして「パッケージ化された拡張機能を読み込み」を選択
+5. 解凍したディレクトリを選択して読み込みを行う
+
+## インストール後の使用方法
+
+1. オンゲキマイページにログイン
+2. ログイン後はどのページでも構わないので、拡張機能を開き「スコア情報取得」ボタンをクリック
+3. 情報フェッチはバックグラウンドで進行します。拡張機能は閉じていても構いません。<br/>フェッチ終了後スコアデータがダウンロードされます
+
+## 注意
+
+- タイムアウトは挟んでいますが、拡張機能内でマイページへのアクセスを行っています。**短い期間で連続してダウンロード実行はしないで下さい**
+- **作成者は等拡張機能により生じた損害の責務を負いません**

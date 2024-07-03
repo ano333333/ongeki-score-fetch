@@ -38,8 +38,15 @@
 1. Releasesより`ongeki-score-fetch.zip`をダウンロード
 2. ダウンロードした`ongeki-score-fetch.zip`を解凍
 3. Chromeの拡張機能ページに移動
-4. 右上の歯車アイコンをクリックして「パッケージ化された拡張機能を読み込み」を選択
-5. 解凍したディレクトリを選択して読み込みを行う
+(chromeタブ右上縦三点アイコンをクリックし「拡張機能を管理」を選択)
+
+![chrome設定タブ](readme/chrome-option.png)
+
+4. 「パッケージ化されていない拡張機能を読み込み」を選択
+
+![chrome拡張機能読み込み](readme/chrome-extension-admin.png)
+
+5. 解凍後「dist」ディレクトリを選択して読み込みを行う
 
 ## インストール後の使用方法
 

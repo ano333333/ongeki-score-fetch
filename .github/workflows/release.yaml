@@ -23,7 +23,9 @@ jobs:
                   npm run build
 
             - name: Zip dist directory
-              run: zip -r dist.zip dist
+              run: |
+                  cd dist
+                  zip -r ../dist.zip .
 
             - name: Create Release
               id: create_release
@@ -44,5 +46,5 @@ jobs:
               with:
                   upload_url: ${{ steps.create_release.outputs.upload_url }}
                   asset_path: ./dist.zip
-                  asset_name: ongeki-score-fetch.zip
+                  asset_name: ongeki-score-fetch-${{ github.run_id }}.zip
                   asset_content_type: application/zip

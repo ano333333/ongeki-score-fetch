@@ -1,4 +1,4 @@
-import { loginInfoKeys, loginInfoType } from "./loginInfoType";
+// import { loginInfoKeys, loginInfoType } from "./loginInfoType";
 import userScoreDataType from "./userScoreDataType";
 import localStorageClass from "./localStorageClass";
 import runtimeMessageType from "./runtimeMessageType";
@@ -6,48 +6,51 @@ import scoreConstDataType from "./scoreConstDataType";
 import allScoreDataType from "./allScoreDataType";
 
 export default class dataFetchClass {
-    private static async fetchLoginInfo() {
-        let loginInfo: loginInfoType = {};
-        //ログイン情報をcookieから取得
-        for (const name of loginInfoKeys) {
-            const value = await this.fetchCookie(name);
-            console.log(`cookie ${name}: ${value}`);
-            if (value) {
-                loginInfo = {
-                    ...loginInfo,
-                    [name]: value,
-                };
-            }
-        }
-        return loginInfo;
-    }
+    // private static async fetchLoginInfo() {
+    //     let loginInfo: loginInfoType = {};
+    //     //ログイン情報をcookieから取得
+    //     for (const name of loginInfoKeys) {
+    //         const value = await this.fetchCookie(name);
+    //         console.log(`cookie ${name}: ${value}`);
+    //         if (value) {
+    //             loginInfo = {
+    //                 ...loginInfo,
+    //                 [name]: value,
+    //             };
+    //         }
+    //     }
+    //     return loginInfo;
+    // }
     public static async isLoginInfoValid() {
-        const loginInfo = await this.fetchLoginInfo();
-        return (
-            loginInfo !== undefined &&
-            loginInfo._t !== undefined &&
-            loginInfo.segaId !== undefined &&
-            // loginInfo._ga_92875CKHN5 !== undefined &&
-            loginInfo._gcl_au !== undefined &&
-            loginInfo._gid !== undefined &&
-            loginInfo.friendCodeList !== undefined &&
-            loginInfo.userId !== undefined &&
-            loginInfo._ga_WDQDR0Y1TP !== undefined &&
-            loginInfo._ga !== undefined
-        );
+        // const loginInfo = await this.fetchLoginInfo();
+        // return (
+        //     loginInfo !== undefined &&
+        //     loginInfo._t !== undefined &&
+        //     // segaIdは、ログイン画面のキャッシュ情報のようなので、条件から外す
+        //     // loginInfo.segaId !== undefined &&
+        //     // loginInfo._ga_92875CKHN5 !== undefined &&
+        //     loginInfo._gcl_au !== undefined &&
+        //     loginInfo._gid !== undefined &&
+        //     // スタンダードコースに未入会の場合生成されない可能性があるため、条件から外す
+        //     // loginInfo.friendCodeList !== undefined &&
+        //     loginInfo.userId !== undefined &&
+        //     loginInfo._ga_WDQDR0Y1TP !== undefined &&
+        //     loginInfo._ga !== undefined
+        // );
+        // cookieチェックが暴発して常にfalseになるバグが確認されたので、一時的にtrueにしておく
+        return true;
     }
     public static async startFetching() {
         await localStorageClass.appendLogicProgress({
             type: "progress",
             message: "スコアデータ取得開始",
         });
-        const loginInfo = await this.fetchLoginInfo();
         await localStorageClass.appendLogicProgress({
             type: "progress",
             message: "ログイン情報取得完了",
         });
         //オンゲキnetから、ユーザーデータの取得
-        const headers = this.getUserScoreFetchHeader(loginInfo);
+        const headers = this.getUserScoreFetchHeader();
         const difs: [string, number][] = [
             ["BASIC", 0],
             ["ADVANCED", 1],
@@ -60,6 +63,7 @@ export default class dataFetchClass {
             const url = `https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=${dif[1]}`;
             const response = await fetch(url, {
                 headers,
+                credentials: "include",
             });
             const html = await response.text();
             userDatas.push(...(await this.sendUserScoreHTML(dif[0], html)));
@@ -151,26 +155,26 @@ export default class dataFetchClass {
             }
         });
     }
-    private static fetchCookie(name: string) {
-        return new Promise((resolve: (value: string | undefined) => any) => {
-            chrome.cookies.get(
-                { url: "https://ongeki-net.com", name },
-                (cookie) => {
-                    const now = new Date();
-                    if (
-                        cookie &&
-                        (!cookie.expirationDate ||
-                            cookie.expirationDate > now.getTime() / 1000)
-                    ) {
-                        resolve(cookie.value);
-                    } else {
-                        resolve(undefined);
-                    }
-                }
-            );
-        });
-    }
-    private static getUserScoreFetchHeader(loginInfo: loginInfoType) {
+    // private static fetchCookie(name: string) {
+    //     return new Promise((resolve: (value: string | undefined) => any) => {
+    //         chrome.cookies.get(
+    //             { url: "https://ongeki-net.com", name },
+    //             (cookie) => {
+    //                 const now = new Date();
+    //                 if (
+    //                     cookie &&
+    //                     (!cookie.expirationDate ||
+    //                         cookie.expirationDate > now.getTime() / 1000)
+    //                 ) {
+    //                     resolve(cookie.value);
+    //                 } else {
+    //                     resolve(undefined);
+    //                 }
+    //             }
+    //         );
+    //     });
+    // }
+    private static getUserScoreFetchHeader() {
         const header = new Headers();
         header.append(
             "Accept",
@@ -179,7 +183,6 @@ export default class dataFetchClass {
         header.append("Accept-Encoding", "gzip, deflate, br");
         header.append("Accept-Language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7");
         header.append("Connection", "keep-alive");
-        header.append("Cookie", this.getCookieString(loginInfo));
         header.append("Host", "ongeki-net.com");
         header.append(
             "Referer",
@@ -195,11 +198,6 @@ export default class dataFetchClass {
             "Mozilla/5.0 (Linux; Android 11; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Mobile Safari/537.36"
         );
         return header;
-    }
-    private static getCookieString(info: loginInfoType) {
-        const v = info;
-        // return `_t=${v._t}; segaId=${v.segaId}; _ga_92875CKHN5=${v._ga_92875CKHN5}; _gcl_au=${v._gcl_au}; _gid=${v._gid}; friendCodeList=${v.friendCodeList}; userId=${v.userId}; _ga_WDQDR0Y1TP=${v._ga_WDQDR0Y1TP}; _ga=${v._ga};`;
-        return `_t=${v._t}; segaId=${v.segaId}; _gcl_au=${v._gcl_au}; _gid=${v._gid}; friendCodeList=${v.friendCodeList}; userId=${v.userId}; _ga_WDQDR0Y1TP=${v._ga_WDQDR0Y1TP}; _ga=${v._ga};`;
     }
     private static async sleep(ms: number) {
         return new Promise((resolve) => setTimeout(resolve, ms));

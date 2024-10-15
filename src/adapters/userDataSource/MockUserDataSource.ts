@@ -48,8 +48,12 @@ const mockDatas: UserDataScoreType[] = [
 ];
 
 export class MockUserDataSource implements IUserDataSource {
-	async getUserData(): Promise<UserDataScoreType[]> {
+	async getUserData(
+		logger: (message: string) => Promise<void>,
+	): Promise<UserDataScoreType[]> {
+		await logger("MockUserDataSource.getUserData start");
 		await new Promise((resolve) => setTimeout(resolve, 1000));
+		await logger("MockUserDataSource.getUserData end");
 		return mockDatas;
 	}
 }

@@ -18,5 +18,7 @@ export type UserDataScoreType = {
 };
 
 export interface IUserDataSource {
-	getUserData(): Promise<UserDataScoreType[]>;
+	getUserData(
+		logger: (message: string) => Promise<void>,
+	): Promise<UserDataScoreType[]>;
 }

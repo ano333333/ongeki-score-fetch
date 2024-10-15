@@ -11,6 +11,8 @@ export type BeatmapDataType = {
 	const: number;
 };
 
-export interface IScoreDataSource {
-	getScoreData(): Promise<BeatmapDataType[]>;
+export interface IBeatmapDataSource {
+	getBeatmapData(
+		logger: (message: string) => Promise<void>,
+	): Promise<BeatmapDataType[]>;
 }

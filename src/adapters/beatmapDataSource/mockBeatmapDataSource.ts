@@ -1,4 +1,4 @@
-import type { BeatmapDataType, IScoreDataSource } from "./base";
+import type { BeatmapDataType, IBeatmapDataSource } from "./base";
 
 const mockDatas: BeatmapDataType[] = [
 	{
@@ -68,9 +68,13 @@ const mockDatas: BeatmapDataType[] = [
 	},
 ];
 
-export class MockScoreDataSource implements IScoreDataSource {
-	async getScoreData(): Promise<BeatmapDataType[]> {
+export class MockBeatmapDataSource implements IBeatmapDataSource {
+	async getBeatmapData(
+		logger: (message: string) => Promise<void>,
+	): Promise<BeatmapDataType[]> {
+		await logger("MockBeatmapDataSource.getBeatmapData start");
 		await new Promise((resolve) => setTimeout(resolve, 1000));
+		await logger("MockBeatmapDataSource.getBeatmapData end");
 		return mockDatas;
 	}
 }

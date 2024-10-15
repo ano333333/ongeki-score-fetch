@@ -6,6 +6,7 @@ export type LocalStorageType = {
 		message: string;
 		type: "progress" | "error" | "finish";
 	}>;
+	outputTarget: "download" | "dropbox";
 	outputTargetOptions: {
 		dropbox: {
 			outputPath: string;
@@ -48,6 +49,16 @@ export class LocalStorage {
 				},
 			}
 		);
+	}
+	public async getOutputTarget() {
+		return (
+			(await this.rawLocalStorage.get<LocalStorageType["outputTarget"]>(
+				"outputTarget",
+			)) ?? "download"
+		);
+	}
+	public async setOutputTarget(target: LocalStorageType["outputTarget"]) {
+		return await this.rawLocalStorage.set("outputTarget", target);
 	}
 	public async setOutputTargetOptions(
 		options: LocalStorageType["outputTargetOptions"],

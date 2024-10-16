@@ -20,8 +20,10 @@ export class LocalStorage {
 	constructor(private readonly rawLocalStorage: IRawLocalStorage) {}
 
 	public async getProgresses() {
-		return await this.rawLocalStorage.get<LocalStorageType["progresses"]>(
-			"progresses",
+		return (
+			(await this.rawLocalStorage.get<LocalStorageType["progresses"]>(
+				"progresses",
+			)) ?? []
 		);
 	}
 	public async appendProgresses(progress: LocalStorageType["progresses"][0]) {

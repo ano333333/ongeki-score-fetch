@@ -17,8 +17,8 @@ export default class MockOutputTargetFactory implements IOutputTargetFactory {
 	}
 	getDropboxOutputTarget(): OutputTargetType<{
 		outputPath: string;
-		accessToken: string;
-		expires: number;
+		accessToken: string | undefined;
+		expires: number | undefined;
 	}> {
 		return async (datas, option, logger) => {
 			await logger('MockOutputTargetFactory.getOutputTarget("dropbox") start');

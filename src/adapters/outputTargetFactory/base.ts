@@ -4,7 +4,7 @@ export interface IOutputTargetFactory {
 	getDownloadOutputTarget(): OutputTargetType<void>;
 	getDropboxOutputTarget(): OutputTargetType<{
 		outputPath: string;
-		accessToken: string;
-		expires: number;
+		accessToken: string | undefined;
+		expires: number | undefined;
 	}>;
 }

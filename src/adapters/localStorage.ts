@@ -10,8 +10,8 @@ export type LocalStorageType = {
 	outputTargetOptions: {
 		dropbox: {
 			outputPath: string;
-			accessToken?: string;
-			expires?: number;
+			accessToken: string | undefined;
+			expires: number | undefined;
 		};
 	};
 };
@@ -46,6 +46,8 @@ export class LocalStorage {
 			)) ?? {
 				dropbox: {
 					outputPath: "ongeki-score-fetch/data.csv",
+					accessToken: undefined,
+					expires: undefined,
 				},
 			}
 		);

@@ -49,6 +49,8 @@ import { MockUserDataSource } from "../adapters/userDataSource/MockUserDataSourc
 import { MockBeatmapDataSource } from "../adapters/beatmapDataSource/mockBeatmapDataSource";
 import { MockRawLocalStorage } from "../adapters/rawLocalStorage/mockRawLocalStorage";
 import MockOutputTargetFactory from "../adapters/outputTargetFactory/mockOutputTargetFactory";
+import Alert from "./components/alert.vue";
+import Button from "./components/button.vue";
 
 const popupController = ref<PopupController>();
 onMounted(async () => {

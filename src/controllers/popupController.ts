@@ -61,6 +61,12 @@ export class PopupController {
 		);
 
 		await this.outputDatas(outputTargetDatasRows, logger);
+
+		await this.localStorage.appendProgresses({
+			createdAt: Date.now(),
+			type: "finish",
+			message: "終了",
+		});
 	}
 
 	/**

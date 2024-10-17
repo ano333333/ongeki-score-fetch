@@ -13,3 +13,13 @@ export type RawLocalStorageVer1Type = {
 		};
 	};
 };
+
+export const defaultRawLocalStorageVer1 = {
+	version: 1,
+	progresses: [],
+	outputTargetOptions: {
+		dropbox: {
+			outputPath: "ongeki-score-fetch/data.csv",
+		},
+	},
+};

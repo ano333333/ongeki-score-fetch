@@ -1,4 +1,7 @@
 import type { IRawLocalStorage } from "./rawLocalStorage/base";
+import { defaultRawLocalStorageVer1 } from "./rawLocalStorageVerTypes/1";
+
+const VALID_VERSIONS = [1];
 
 export type LocalStorageType = {
 	progresses: Array<{
@@ -18,7 +21,18 @@ export type LocalStorageType = {
 
 export class LocalStorage {
 	constructor(private readonly rawLocalStorage: IRawLocalStorage) {}
-
+	public async validateRawLocalStorage() {
+		const version = await this.rawLocalStorage.get<number>("version");
+		if (!version || !VALID_VERSIONS.includes(version)) {
+			const defaultRawLocalStorage = defaultRawLocalStorageVer1;
+			for (const key in defaultRawLocalStorage) {
+				await this.rawLocalStorage.set(
+					key,
+					defaultRawLocalStorage[key as keyof typeof defaultRawLocalStorage],
+				);
+			}
+		}
+	}
 	public async getProgresses() {
 		return (
 			(await this.rawLocalStorage.get<LocalStorageType["progresses"]>(

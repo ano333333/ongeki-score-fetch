@@ -47,27 +47,23 @@ import { LocalStorage, type LocalStorageType } from "../adapters/localStorage";
 import { PopupController } from "../controllers/popupController";
 import { MockUserDataSource } from "../adapters/userDataSource/MockUserDataSource";
 import { MockBeatmapDataSource } from "../adapters/beatmapDataSource/mockBeatmapDataSource";
-import { MockRawLocalStorage } from "../adapters/rawLocalStorage/mockRawLocalStorage";
 import MockOutputTargetFactory from "../adapters/outputTargetFactory/mockOutputTargetFactory";
 import Alert from "./components/alert.vue";
 import Button from "./components/button.vue";
+import { ChrExtLocalStorage } from "../adapters/rawLocalStorage/chrExtLocalStorage";
 
-const popupController = ref<PopupController>();
+const localStorage = new LocalStorage(new ChrExtLocalStorage());
+const controller = new PopupController(
+    new MockUserDataSource(),
+    new MockBeatmapDataSource(),
+    localStorage,
+    new MockOutputTargetFactory(),
+    (newProgresses: LocalStorageType["progresses"]) => {
+        progresses.value = newProgresses;
+    },
+);
 onMounted(async () => {
-    const userDataSource = new MockUserDataSource();
-    const beatmapDataSource = new MockBeatmapDataSource();
-    const rawLocalStorage = new MockRawLocalStorage();
-    const localStorage = new LocalStorage(rawLocalStorage);
-    const outputTargetFactory = new MockOutputTargetFactory();
-    popupController.value = new PopupController(
-        userDataSource,
-        beatmapDataSource,
-        localStorage,
-        outputTargetFactory,
-        progressesListener,
-    );
-
-    isFetchAvailable.value = await popupController.value.isUserDataFetchable();
+    isFetchAvailable.value = await controller.isUserDataFetchable();
     progresses.value = await localStorage.getProgresses();
 });
 
@@ -80,13 +76,10 @@ const isProcessing = computed(() => {
     if (!last) return false;
     return last.type === "progress";
 });
-const progressesListener = (newProgresses: LocalStorageType["progresses"]) => {
-    progresses.value = newProgresses;
-};
 
 const onclick = async () => {
-    if(popupController.value && isFetchAvailable.value){
-        await popupController.value.fetchAndOutputData();
+    if (isFetchAvailable.value) {
+        await controller.fetchAndOutputData();
     }
 };
 </script>

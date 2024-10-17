@@ -19,7 +19,9 @@ export class PopupController {
 		progressesListener: (progress: LocalStorageType["progresses"]) => void,
 	) {
 		this.localStorage.addProgressesListener(progressesListener);
-		this.localStorage.validateRawLocalStorage().then(this.judgeProgressTimeout);
+		this.localStorage
+			.validateRawLocalStorage()
+			.then(() => this.judgeProgressTimeout);
 	}
 
 	async isUserDataFetchable() {

@@ -52,11 +52,10 @@ import Alert from "./components/alert.vue";
 import Button from "./components/button.vue";
 import { ChrExtLocalStorage } from "../adapters/rawLocalStorage/chrExtLocalStorage";
 
-const localStorage = new LocalStorage(new ChrExtLocalStorage());
 const controller = new PopupController(
     new MockUserDataSource(),
     new MockBeatmapDataSource(),
-    localStorage,
+    new LocalStorage(new ChrExtLocalStorage()),
     new MockOutputTargetFactory(),
     (newProgresses: LocalStorageType["progresses"]) => {
         progresses.value = newProgresses;
@@ -64,7 +63,7 @@ const controller = new PopupController(
 );
 onMounted(async () => {
     isFetchAvailable.value = await controller.isUserDataFetchable();
-    progresses.value = await localStorage.getProgresses();
+    progresses.value = await controller.getLocalStorageProgresses();
 });
 
 const isFetchAvailable = ref<true|string>("");

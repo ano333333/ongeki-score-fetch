@@ -38,6 +38,10 @@ export class PopupController {
 		return true;
 	}
 
+	async getLocalStorageProgresses() {
+		return await this.localStorage.getProgresses();
+	}
+
 	async fetchAndOutputData() {
 		const logger = async (message: string) => {
 			await this.localStorage.appendProgresses({

@@ -17,6 +17,10 @@
         "service_worker": "background.js",
         "type": "module"
     },
+    "options_ui": {
+        "page": "options.html",
+        "open_in_tab": false
+    },
     "web_accessible_resources": [
         {
             "resources": ["redirect.html"],

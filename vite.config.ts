@@ -9,7 +9,7 @@ export default defineConfig({
 				popup: "src/popup.html",
 				offscreenDataFetch: "src/offscreenDataFetch.html",
 				background: "src/background.ts",
-				// option: "src/options.html",
+				option: "src/options.html",
 				redirect: "src/redirect.html",
 			},
 			output: {

@@ -10,7 +10,7 @@ export default defineConfig({
 				offscreenDataFetch: "src/offscreenDataFetch.html",
 				background: "src/background.ts",
 				// option: "src/options.html",
-				// redirect: "src/redirect.html",
+				redirect: "src/redirect.html",
 			},
 			output: {
 				entryFileNames: "[name].js", // 追加: 出力ファイル名を指定

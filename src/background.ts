@@ -1,11 +1,11 @@
 import { LocalStorage } from "./adapters/localStorage";
-import MockOutputTargetFactory from "./adapters/outputTargetFactory/mockOutputTargetFactory";
+import ProductionOutputTargetFactory from "./adapters/outputTargetFactory/productionOutputTargetFactory";
 import type { OutputTargetDataRowType } from "./adapters/outputTargetType";
 import { ChrExtLocalStorage } from "./adapters/rawLocalStorage/chrExtLocalStorage";
 import type { ChrExtRuntimeMessageType } from "./messages";
 
 const localStorage = new LocalStorage(new ChrExtLocalStorage());
-const outputTargetFactory = new MockOutputTargetFactory();
+const outputTargetFactory = new ProductionOutputTargetFactory();
 
 chrome.runtime.onMessage.addListener(
 	(message: ChrExtRuntimeMessageType, _, sendResponse) => {

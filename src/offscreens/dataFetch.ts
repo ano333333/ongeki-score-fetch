@@ -1,9 +1,9 @@
-import { MockUserDataSource } from "../adapters/userDataSource/MockUserDataSource";
 import { MockBeatmapDataSource } from "../adapters/beatmapDataSource/mockBeatmapDataSource";
 import type { UserDataScoreType } from "../adapters/userDataSource/base";
 import type { BeatmapDataType } from "../adapters/beatmapDataSource/base";
 import type { OutputTargetDataRowType } from "../adapters/outputTargetType";
 import type { ChrExtRuntimeMessageType } from "../messages";
+import { OngekiMypageUserDataSource } from "../adapters/userDataSource/ongekiMypageUserDataSource";
 
 console.log("start offscreenDataFetch.ts");
 
@@ -19,7 +19,7 @@ chrome.runtime.onMessage.addListener((message: ChrExtRuntimeMessageType) => {
 const fetch = async () => {
 	console.log("offscreenDataFetch.ts: fetch");
 	try {
-		const userDataSource = new MockUserDataSource();
+		const userDataSource = new OngekiMypageUserDataSource();
 		const beatmapDataSource = new MockBeatmapDataSource();
 
 		const logger = async (log: string) => {
@@ -33,7 +33,12 @@ const fetch = async () => {
 			} as ChrExtRuntimeMessageType);
 		};
 
-		const userDatas = await userDataSource.getUserData(logger);
+		let userDatas: UserDataScoreType[] = [];
+		try {
+			userDatas = await userDataSource.getUserData(logger);
+		} catch (e) {
+			throw "ユーザーデータ取得中にエラーが発生しました。再ログインしてください。";
+		}
 		const beatmapDatas = await beatmapDataSource.getBeatmapData(logger);
 
 		const combinedDatas = combineDatas(userDatas, beatmapDatas);

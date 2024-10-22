@@ -30,10 +30,7 @@
                         完了しました
                     </p>
                     <p v-if="progress.type === 'error'" class="text-red-400">
-                        {{
-                            "エラーが発生しました:" +
-                            progress.message
-                        }}
+                        {{ progress.message }}
                     </p>
                     <hr v-if="index !== progresses.length - 1" />
                 </div>

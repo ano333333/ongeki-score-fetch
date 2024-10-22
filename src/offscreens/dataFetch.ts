@@ -78,20 +78,25 @@ function combineDatas(
 	userDatas: UserDataScoreType[],
 	beatmapDatas: BeatmapDataType[],
 ): OutputTargetDataRowType[] {
-	const beatmapDatasNDIndexMap = new Map<[string, string], number>();
-	for (const [index, beatmapData] of beatmapDatas.entries()) {
-		beatmapDatasNDIndexMap.set(
-			[beatmapData.name, beatmapData.difficulty],
-			index,
-		);
+	// キーはname
+	const beatmapNameDifficultyMap = new Map<
+		string,
+		Map<BeatmapDataDifficultyType, BeatmapDataType>
+	>();
+	for (const beatmapData of beatmapDatas) {
+		const m = beatmapNameDifficultyMap.get(beatmapData.name);
+		if (!m) {
+			beatmapNameDifficultyMap.set(beatmapData.name, new Map());
+		}
+		beatmapNameDifficultyMap
+			.get(beatmapData.name)
+			?.set(beatmapData.difficulty, beatmapData);
 	}
+	console.log(beatmapNameDifficultyMap);
 	return userDatas.map((userData) => {
 		const name = userData.name;
 		const difficulty = userData.difficulty;
-		const beatmapDataIndex = beatmapDatasNDIndexMap.get([name, difficulty]);
-		const beatmapData = beatmapDataIndex
-			? beatmapDatas[beatmapDataIndex]
-			: null;
+		const beatmapData = beatmapNameDifficultyMap.get(name)?.get(difficulty);
 		return {
 			name,
 			difficulty,

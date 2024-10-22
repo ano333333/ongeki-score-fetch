@@ -24,4 +24,3 @@ dist-ssr
 *.sw?
 
 package-lock.json
-dist_old

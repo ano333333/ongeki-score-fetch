@@ -7,8 +7,8 @@ export default defineConfig({
 		rollupOptions: {
 			input: {
 				popup: "src/popup.html",
-				// offscreen: "src/offscreen.html",
-				// background: "src/background.ts",
+				offscreenDataFetch: "src/offscreenDataFetch.html",
+				background: "src/background.ts",
 				// option: "src/options.html",
 				// redirect: "src/redirect.html",
 			},

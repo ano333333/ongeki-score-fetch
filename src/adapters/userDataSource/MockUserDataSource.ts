@@ -56,8 +56,4 @@ export class MockUserDataSource implements IUserDataSource {
 		await logger("MockUserDataSource.getUserData end");
 		return mockDatas;
 	}
-	async isUserDataFetchable(): Promise<true | string> {
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		return true;
-	}
 }

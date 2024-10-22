@@ -1,8 +1,8 @@
 <template>
     <div class="w-80">
         <div class="m-2">
-            <Alert v-if="isFetchAvailable !== true" type="error">
-                {{ isFetchAvailable }}
+            <Alert v-if="isProcessing" type="error">
+                情報取得中です
             </Alert>
             <Alert v-else type="success">
                 情報取得可能です
@@ -11,7 +11,7 @@
         <div class="m-2">
             <Button
                 @click="onclick"
-                :disabled="isFetchAvailable !== true || isProcessing"
+                :disabled="isProcessing"
             >
                 スコア情報取得
             </Button>
@@ -45,28 +45,22 @@
 import { onMounted, ref, computed } from "vue";
 import { LocalStorage, type LocalStorageType } from "../adapters/localStorage";
 import { PopupController } from "../controllers/popupController";
-import { MockUserDataSource } from "../adapters/userDataSource/MockUserDataSource";
-import { MockBeatmapDataSource } from "../adapters/beatmapDataSource/mockBeatmapDataSource";
-import MockOutputTargetFactory from "../adapters/outputTargetFactory/mockOutputTargetFactory";
 import Alert from "./components/alert.vue";
 import Button from "./components/button.vue";
 import { ChrExtLocalStorage } from "../adapters/rawLocalStorage/chrExtLocalStorage";
+import { ChrExtBacktroundWorker } from "../adapters/backgroundWorker/chrExtBacktroundWorker";
 
 const controller = new PopupController(
-    new MockUserDataSource(),
-    new MockBeatmapDataSource(),
     new LocalStorage(new ChrExtLocalStorage()),
-    new MockOutputTargetFactory(),
+    new ChrExtBacktroundWorker(),
     (newProgresses: LocalStorageType["progresses"]) => {
         progresses.value = newProgresses;
     },
 );
 onMounted(async () => {
-    isFetchAvailable.value = await controller.isUserDataFetchable();
-    progresses.value = await controller.getLocalStorageProgresses();
+    const progs = await controller.getLocalStorageProgresses();
+    progresses.value = progs;
 });
-
-const isFetchAvailable = ref<true|string>("");
 
 const progresses = ref<LocalStorageType["progresses"]>([]);
 //処理中かどうか、progressesの最終要素が"progress"かどうかで判断
@@ -77,7 +71,7 @@ const isProcessing = computed(() => {
 });
 
 const onclick = async () => {
-    if (isFetchAvailable.value) {
+    if (!isProcessing.value) {
         await controller.fetchAndOutputData();
     }
 };

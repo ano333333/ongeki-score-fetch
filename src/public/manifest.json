@@ -12,5 +12,15 @@
         "https://www.dropbox.com/oauth2/authorize",
         "https://content.dropboxapi.com/2/files/upload"
     ],
-    "permissions": ["cookies", "storage", "offscreen", "downloads", "tabs"]
+    "permissions": ["cookies", "storage", "offscreen", "downloads", "tabs"],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": ["redirect.html"],
+            "matches": ["https://www.dropbox.com/*"]
+        }
+    ]
 }

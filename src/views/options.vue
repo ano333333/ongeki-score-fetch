@@ -1,7 +1,7 @@
 <template>
     <div class="m-4">
         <h1 class="m-2 text-lg">オプション</h1>
-        <div v-if="!optionData">
+        <div v-if="!outputTargetOptions">
             <p class="text-gray-400">オプションデータを読み込み中</p>
         </div>
         <div v-else>
@@ -10,12 +10,13 @@
                     <label
                         for="outputType"
                         class="block text-sm font-medium leading-6"
-                        >出力方法</label
                     >
+                        出力方法
+                    </label>
                     <div class="mt-2">
                         <select
                             id="outputType"
-                            v-model="optionData.outputType"
+                            v-model="outputTarget"
                             class="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
                         >
                             <option
@@ -38,7 +39,7 @@
                         ></label
                     >
                     <input
-                        v-model="optionData.outputPath"
+                        v-model="outputTargetOptions.dropbox.outputPath"
                         id="outputPath"
                         type="text"
                         class="block w-full rounded-md border-0 px-1.5 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
@@ -65,65 +66,48 @@
     </div>
 </template>
 <script setup lang="ts">
-import localStorageClass from "./utils/localStorageClass";
-import { optionDataType, outputType } from "./utils/optionDataType";
+import { LocalStorage, type LocalStorageType } from "../adapters/localStorage";
 import { onMounted, ref, computed } from "vue";
+import { OptionsController } from "../controllers/optionsController";
+import { ChrExtLocalStorage } from "../adapters/rawLocalStorage/chrExtLocalStorage";
 
-const optionData = ref<optionDataType>({
-    outputType: outputType.download,
-    outputPath: "",
+const controller = new OptionsController(
+    new LocalStorage(new ChrExtLocalStorage()),
+    updateIsProcessing,
+);
+
+const outputTarget = ref<LocalStorageType["outputTarget"]>("download");
+const outputTargetOptions = ref<LocalStorageType["outputTargetOptions"]>({
+    dropbox: {
+        outputPath: "",
+        accessToken: undefined,
+        expires: undefined,
+    },
 });
 
-const outputTypeList = [
-    { value: outputType.download, text: "ダウンロード" },
-    { value: outputType.dropbox, text: "Dropbox" },
+const outputTypeList: { value: LocalStorageType["outputTarget"]; text: string }[] = [
+    { value: "download", text: "ダウンロード" },
+    { value: "dropbox", text: "Dropbox" },
 ];
 
 const isProcessing = ref(true);
+function updateIsProcessing(progresses: LocalStorageType["progresses"]) {
+    const lastProgress = progresses.at(-1);
+    isProcessing.value = lastProgress?.type === "progress";
+};
 
 onMounted(async () => {
-    const data = await localStorageClass.getOptionData();
-    optionData.value = data;
-});
-
-onMounted(() => {
-    localStorageClass.isLogicProcessing().then((value) => {
-        isProcessing.value = value;
-    });
-});
-
-//localStorageを監視し、logicProgressに変更があればisProcessingを更新
-onMounted(() => {
-    localStorageClass.addLogicProgressListener(async () => {
-        isProcessing.value = await localStorageClass.isLogicProcessing();
-    });
+    outputTarget.value = await controller.getOutputTarget();
+    outputTargetOptions.value = await controller.getOutputTargetOptions();
+    updateIsProcessing(await controller.getProgresses());
 });
 
 //「保存」ボタンのクリックイベント
 const saveOnClick = () => {
-    if (optionData.value !== undefined) {
-        localStorageClass.setOptionData(optionData.value);
-    }
+    controller.setOutputTargetAndOptions(outputTarget.value, outputTargetOptions.value);
 };
 
 const isOutputPathValid = computed(() => {
-    if (optionData.value === undefined) {
-        return false;
-    }
-    //パスに使用できない文字が含まれていればfalse
-    const unusable = /[\\:\*\?\"<>\|]/;
-    if (optionData.value.outputPath.search(unusable) !== -1) {
-        return false;
-    }
-    // \/ で始まっていればfalse
-    if (optionData.value.outputPath.startsWith("/")) {
-        return false;
-    }
-    //outputPathの拡張子が.csvまたは.txtでなければfalse
-    const ext = optionData.value.outputPath.split(".").pop();
-    if (ext !== "csv" && ext !== "txt") {
-        return false;
-    }
-    return true;
+    return controller.isOutputPathValid(outputTargetOptions.value.dropbox.outputPath);
 });
 </script>

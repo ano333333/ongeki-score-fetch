@@ -1,9 +1,12 @@
-import { MockBeatmapDataSource } from "../adapters/beatmapDataSource/mockBeatmapDataSource";
 import type { UserDataScoreType } from "../adapters/userDataSource/base";
-import type { BeatmapDataType } from "../adapters/beatmapDataSource/base";
+import type {
+	BeatmapDataDifficultyType,
+	BeatmapDataType,
+} from "../adapters/beatmapDataSource/base";
 import type { OutputTargetDataRowType } from "../adapters/outputTargetType";
 import type { ChrExtRuntimeMessageType } from "../messages";
 import { OngekiMypageUserDataSource } from "../adapters/userDataSource/ongekiMypageUserDataSource";
+import { OngekiScoreLogBeatmapDataSource } from "../adapters/beatmapDataSource/ongekiScoreLogBeatmapDataSource";
 
 console.log("start offscreenDataFetch.ts");
 
@@ -20,7 +23,7 @@ const fetch = async () => {
 	console.log("offscreenDataFetch.ts: fetch");
 	try {
 		const userDataSource = new OngekiMypageUserDataSource();
-		const beatmapDataSource = new MockBeatmapDataSource();
+		const beatmapDataSource = new OngekiScoreLogBeatmapDataSource();
 
 		const logger = async (log: string) => {
 			console.log(`offscreenDataFetch.ts: ${log}`);

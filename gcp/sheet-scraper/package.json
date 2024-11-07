@@ -1,0 +1,17 @@
+{
+    "name": "sheet-scraper",
+    "version": "1.0.0",
+    "description": "",
+    "main": "codes/index.js",
+    "scripts": {
+        "build": "npx tsc",
+        "dev": "node --env-file .env -r ts-node/register codes/index.ts"
+    },
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@types/node": "^22.9.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.6.3"
+    }
+}

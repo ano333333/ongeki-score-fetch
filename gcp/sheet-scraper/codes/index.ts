@@ -1,9 +1,10 @@
 import http from "node:http";
-
-const server = http.createServer((req, res) => {
+import { test } from "./playwrightTest";
+const server = http.createServer(async (req, res) => {
 	const ENV = process.env.ENV;
 	console.log(`ENV: ${ENV}`);
 	console.log(`${req.method} ${req.url}`);
+	await test();
 	res.statusCode = 200;
 	res.setHeader("Content-Type", "text/plain");
 	res.end(`Hello, world!\n${req.method} ${req.url}`);

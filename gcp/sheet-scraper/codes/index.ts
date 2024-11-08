@@ -1,13 +1,13 @@
 import http from "node:http";
-import { test } from "./playwrightTest";
+import { getMusicInfoFromOngekiMypage } from "./getMusicInfoFromOngekiMypage";
 const server = http.createServer(async (req, res) => {
 	const ENV = process.env.ENV;
 	console.log(`ENV: ${ENV}`);
 	console.log(`${req.method} ${req.url}`);
-	await test();
+	const musicInfoList = await getMusicInfoFromOngekiMypage();
 	res.statusCode = 200;
-	res.setHeader("Content-Type", "text/plain");
-	res.end(`Hello, world!\n${req.method} ${req.url}`);
+	res.setHeader("Content-Type", "application/json");
+	res.end(JSON.stringify(musicInfoList));
 });
 
 server.listen(8080, () => {

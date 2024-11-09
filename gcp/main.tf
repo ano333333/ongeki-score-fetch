@@ -105,6 +105,32 @@ resource "docker_registry_image" "sheet_scraper_image" {
   depends_on = [docker_image.sheet_scraper_image]
 }
 
+# Cloud Run用サービスアカウントの作成
+resource "google_service_account" "sheet_scraper_sa" {
+  account_id   = "sheet-scraper-${local.suffix}"
+  display_name = "Service account for Cloud Run sheet-scraper"
+}
+
+# Cloud Runサービス
+resource "google_cloud_run_service" "sheet_scraper" {
+  name     = "sheet-scraper-${local.suffix}"
+  location = var.region
+
+  template {
+    spec {
+      containers {
+        image = local.image_uri
+      }
+      service_account_name = google_service_account.sheet_scraper_sa.email
+    }
+  }
+
+  autogenerate_revision_name = true
+
+  depends_on = [google_project_service.cloud_run_api, google_service_account.sheet_scraper_sa, docker_registry_image.sheet_scraper_image]
+}
+
+
 output "suffix" {
   value = local.suffix
 }

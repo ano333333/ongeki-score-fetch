@@ -5,3 +5,5 @@ terraform.tfvars
 
 *.tfstate
 *.tfstate.*
+
+sheet-scraper.zip

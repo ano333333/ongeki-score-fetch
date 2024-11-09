@@ -60,7 +60,7 @@ locals {
   # リポジトリのuri
   repository_uri = "${google_artifact_registry_repository.sheet_scraper_repository.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.sheet_scraper_repository.name}"
   # イメージのuri
-  image_uri = "${local.repository_uri}/sheet-scraper-image:latest"
+  image_uri = "${local.repository_uri}/sheet-scraper-image"
 }
 
 # Artifact Registryリポジトリ
@@ -72,6 +72,14 @@ resource "google_artifact_registry_repository" "sheet_scraper_repository" {
   depends_on = [google_project_service.artifact_registry_api]
 }
 
+# imageのリビルド判定用に、sheet-scraper/をzip化
+data "archive_file" "sheet_scraper_zip" {
+  type        = "zip"
+  source_dir  = "./sheet-scraper"
+  output_path = "./sheet-scraper.zip"
+  excludes    = ["node_modules", "dist/**", "auth.json"]
+}
+
 # docker imageビルド
 resource "docker_image" "sheet_scraper_image" {
   name         = local.image_uri
@@ -81,11 +89,19 @@ resource "docker_image" "sheet_scraper_image" {
   build {
     context = "./sheet-scraper"
   }
+
+  triggers = {
+    sha256 = data.archive_file.sheet_scraper_zip.output_sha256
+  }
 }
 
 # docker image push
 resource "docker_registry_image" "sheet_scraper_image" {
   name = docker_image.sheet_scraper_image.name
+
+  triggers = {
+    sha256 = data.archive_file.sheet_scraper_zip.output_sha256
+  }
 
   depends_on = [docker_image.sheet_scraper_image]
 }

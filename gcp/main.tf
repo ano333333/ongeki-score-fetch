@@ -127,6 +127,11 @@ resource "google_cloud_run_service" "sheet_scraper" {
 
   autogenerate_revision_name = true
 
+  traffic {
+    latest_revision = true
+    percent         = 100
+  }
+
   depends_on = [google_project_service.cloud_run_api, google_service_account.sheet_scraper_sa, docker_registry_image.sheet_scraper_image]
 }
 

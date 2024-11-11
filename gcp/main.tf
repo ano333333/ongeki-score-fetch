@@ -44,16 +44,28 @@ locals {
 # Artifact Registry APIの有効化
 resource "google_project_service" "artifact_registry_api" {
   service = "artifactregistry.googleapis.com"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Cloud Run APIの有効化
 resource "google_project_service" "cloud_run_api" {
   service = "run.googleapis.com"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Cloud Scheduler APIの有効化
 resource "google_project_service" "cloud_scheduler_api" {
   service = "cloudscheduler.googleapis.com"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 locals {

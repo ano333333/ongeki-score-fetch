@@ -9,7 +9,9 @@ on:
             - "features/create-cloud-data-source"
 
 jobs:
-    apply-new-terraform:
+    apply-new:
+        outputs:
+            is-success: ${{steps.apply.outcome}} # 'success' or 'failure'
         permissions:
             id-token: write
             contents: read
@@ -53,27 +55,21 @@ jobs:
               run: |
                   echo "$FILE_CONTENT" > ./sheet-scraper/.env
 
-            - name: "Apply Terraform"
+            - name: "Apply"
+              id: "apply"
               run: |
                   terraform init
                   terraform validate
                   terraform apply -auto-approve
 
-            # - name: "Add Comment To PR If Apply Failed"
-            #   if: failure()
-            #   run: |
-            #       cat << EOF > pr_comment.md
-            #       ## Terraform Apply Failed
-            #       Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
-            #       EOF
-            #       gh pr comment ${{github.event.pull_request.number}} --body-file pr_comment.md
-
-            - name: "Destroy Terraform"
+            - name: "Destroy"
               if: always()
               run: |
                   terraform destroy -auto-approve
 
     plan-stg:
+        outputs:
+            is-success: ${{steps.plan.outcome}} # 'success' or 'failure'
         permissions:
             id-token: write
             contents: read
@@ -122,6 +118,34 @@ jobs:
                   echo "$FILE_CONTENT" > ./sheet-scraper/.env
 
             - name: "Plan"
+              id: "plan"
               run: |
                   terraform init
                   terraform plan
+
+    add-comment-to-pr:
+        runs-on: ubuntu-latest
+        needs:
+            - apply-new
+            - plan-stg
+        if: always()
+        steps:
+            - name: "Add Success Comment To PR"
+              run: |
+                  # cat << EOF > pr_comment.md
+                  # ## Terraform Apply Test Success
+                  # Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+                  # EOF
+                  # gh pr comment ${{github.event.pull_request.number}} --body-file pr_comment.md
+                  echo "Terraform Apply Test Success"
+              if: needs.apply-new.outputs.is-success == 'success' && needs.plan-stg.outputs.is-success == 'success'
+
+            - name: "Add Failure Comment To PR"
+              if: needs.apply-new.outputs.is-success == 'failure' || needs.plan-stg.outputs.is-success == 'failure'
+              run: |
+                  #   cat << EOF > pr_comment.md
+                  #   ## Terraform Apply Test Failed
+                  #   Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+                  #   EOF
+                  #   gh pr comment ${{github.event.pull_request.number}} --body-file pr_comment.md
+                  echo "Terraform Apply Test Failed"

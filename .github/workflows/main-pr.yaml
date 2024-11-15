@@ -72,3 +72,56 @@ jobs:
               if: always()
               run: |
                   terraform destroy -auto-approve
+
+    plan-stg:
+        permissions:
+            id-token: write
+            contents: read
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./gcp
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - id: "gcp-auth"
+              name: "Authenticate to GCP"
+              uses: "google-GitHub-actions/auth@v1"
+              with:
+                  create_credentials_file: true
+                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
+                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
+
+            - name: "Activate GCP Service Account"
+              run: |
+                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+
+            - name: "Configure Docker to use GCP Artifact Registry"
+              run: |
+                  gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
+
+            - name: "Download stg.tfstate"
+              run: |
+                  gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate ./terraform.tfstate
+
+            - name: "Copy variables.tf"
+              env:
+                  PROJECT_ID: ${{secrets.PROJECT_ID}}
+                  REGION: ${{secrets.REGION}}
+                  ENV: "stg"
+              run: |
+                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
+                  echo "region = \"$REGION\"" >> ./terraform.tfvars
+                  echo "env = \"$ENV\"" >> ./terraform.tfvars
+
+            - name: "Copy sheet-scraper/.env"
+              env:
+                  FILE_CONTENT: ${{secrets.SHEET_SCRAPER_ENV}}
+              run: |
+                  echo "$FILE_CONTENT" > ./sheet-scraper/.env
+
+            - name: "Plan"
+              run: |
+                  terraform init
+                  terraform plan

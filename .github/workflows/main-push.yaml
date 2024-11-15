@@ -3,7 +3,8 @@ name: github actions on push to master
 on:
     push:
         branches:
-            - "master"
+            # - "master"
+            - "features/create-cloud-data-source"
 
 jobs:
     apply-terraform:
@@ -26,17 +27,27 @@ jobs:
                   workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
                   service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
 
+            - name: "Activate GCP Service Account"
+              run: |
+                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+
+            - name: "Configure Docker to use GCP Artifact Registry"
+              run: |
+                  gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
+
             - name: "Download stg.tfstate"
               run: |
-                  curl -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-                       https://storage.googleapis.com/${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate \
-                       -o terraform.tfstate
+                  gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate ./terraform.tfstate
 
             - name: "Copy variables.tf"
               env:
-                  FILE_CONTENT: ${{secrets.TERRAFORM_TFVARS}}
+                  PROJECT_ID: ${{secrets.PROJECT_ID}}
+                  REGION: ${{secrets.REGION}}
+                  ENV: "stg"
               run: |
-                  echo "$FILE_CONTENT" > ./terraform.tfvars
+                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
+                  echo "region = \"$REGION\"" >> ./terraform.tfvars
+                  echo "env = \"$ENV\"" >> ./terraform.tfvars
 
             - name: "Copy sheet-scraper/.env"
               env:
@@ -44,15 +55,13 @@ jobs:
               run: |
                   echo "$FILE_CONTENT" > ./sheet-scraper/.env
 
-            - name: "Apply Terraform"
+            - name: "Apply"
               run: |
                   terraform init
                   terraform validate
                   terraform apply -auto-approve
 
             - name: "Upload stg.tfstate"
+              if: always()
               run: |
-                  curl -X PUT -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-                       -H "Content-Type: application/octet-stream" \
-                       --data-binary @terraform.tfstate \
-                       https://storage.googleapis.com/${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate
+                  gsutil cp terraform.tfstate gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate

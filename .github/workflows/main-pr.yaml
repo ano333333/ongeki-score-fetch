@@ -29,6 +29,10 @@ jobs:
                   workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
                   service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
 
+            - name: "Activate GCP Service Account"
+              run: |
+                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+
             - name: "Configure Docker to use GCP Artifact Registry"
               run: |
                   gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev

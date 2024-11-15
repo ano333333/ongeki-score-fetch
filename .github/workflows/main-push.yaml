@@ -3,8 +3,7 @@ name: github actions on push to master
 on:
     push:
         branches:
-            # - "master"
-            - "features/create-cloud-data-source"
+            - "master"
 
 jobs:
     apply-terraform:

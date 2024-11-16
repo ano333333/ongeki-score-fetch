@@ -119,6 +119,15 @@ resource "google_cloud_run_service" "sheet_scraper" {
   depends_on = [google_service_account.sheet_scraper_sa, docker_registry_image.sheet_scraper_image]
 }
 
+# イメージデプロイで"gcloud run deploy"を実行するためのコマンド
+resource "terraform_data" "deploy_command" {
+  triggers_replace = [docker_image.sheet_scraper_image]
+
+  provisioner "local-exec" {
+    command = "gcloud run deploy ${google_cloud_run_service.sheet_scraper.name} --image=${local.image_uri}:latest --region=${var.region}"
+  }
+}
+
 
 # 譜面情報保存用のCloud Storageバケット
 resource "google_storage_bucket" "sheet_storage" {

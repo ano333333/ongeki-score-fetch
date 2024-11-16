@@ -119,6 +119,21 @@ resource "google_cloud_run_service" "sheet_scraper" {
 }
 
 
+# 譜面情報保存用のCloud Storageバケット
+resource "google_storage_bucket" "sheet_storage" {
+  name     = "sheet-storage-${local.suffix}"
+  location = var.region
+
+  uniform_bucket_level_access = true
+}
+
+# sheet-storageのallUsersに対する読み取り権限
+resource "google_storage_bucket_iam_member" "sheet_storage_all_users_reader" {
+  bucket = google_storage_bucket.sheet_storage.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
 output "suffix" {
   value = local.suffix
 }

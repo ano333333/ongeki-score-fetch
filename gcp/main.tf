@@ -115,6 +115,10 @@ resource "google_cloud_run_service" "sheet_scraper" {
           name  = "SPREADSHEET_ID"
           value = var.spreadsheet_id
         }
+        env {
+          name  = "SHEET_STORAGE_NAME"
+          value = google_storage_bucket.sheet_storage.name
+        }
       }
       service_account_name = google_service_account.sheet_scraper_sa.email
     }

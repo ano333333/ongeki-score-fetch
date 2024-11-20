@@ -69,7 +69,7 @@ export async function getMusicInfoFromOngekiMypage(
 	}
 	// "Singularity"の3曲は手動で挿入
 	musicInfoList.push({
-		title: "Singularity -ETIA.-",
+		title: "Singularity -ETIA-",
 		genre: "VARIETY",
 		character: "光",
 	});

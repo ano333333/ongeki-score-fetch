@@ -11,6 +11,9 @@ importers:
       '@google-cloud/local-auth':
         specifier: ^3.0.1
         version: 3.0.1
+      csv-stringify:
+        specifier: ^6.5.1
+        version: 6.5.1
       google-auth-library:
         specifier: ^9.15.0
         version: 9.15.0
@@ -101,6 +104,9 @@ packages:
 
   create-require@1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
+
+  csv-stringify@6.5.1:
+    resolution: {integrity: sha512-+9lpZfwpLntpTIEpFbwQyWuW/hmI/eHuJZD1XzeZpfZTqkf1fyvBbBLXTJJMsBuuS11uTShMqPwzx4A6ffXgRQ==}
 
   debug@4.3.7:
     resolution: {integrity: sha512-Er2nc/H7RrMXZBFCEim6TCmMk02Z8vLC2Rbi1KEBggpo0fS6l0S1nnapwmIi3yW/+GOJap1Krg4w0Hg80oCqgQ==}
@@ -377,6 +383,8 @@ snapshots:
       set-function-length: 1.2.2
 
   create-require@1.1.1: {}
+
+  csv-stringify@6.5.1: {}
 
   debug@4.3.7:
     dependencies:

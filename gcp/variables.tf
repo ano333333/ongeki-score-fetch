@@ -23,7 +23,7 @@ variable "sega_password" {
   type        = string
 }
 
-variable "spreadsheet_id" {
+variable "spread_sheet_id" {
   description = "スプレッドシートID(sheet-scraperで使用)"
   type        = string
 }

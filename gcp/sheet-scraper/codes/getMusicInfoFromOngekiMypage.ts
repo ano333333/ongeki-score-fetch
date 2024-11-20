@@ -8,6 +8,15 @@ export type OngekiMypageMusicInfo = {
 	character: string;
 };
 
+const GENRE_MASTER_RECORD_PAGE_URL =
+	"https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=3";
+const GENRE_LUNATIC_RECORD_PAGE_URL =
+	"https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=10";
+const CHARACTER_MASTER_RECORD_PAGE_URL =
+	"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=3";
+const CHARACTER_LUNATIC_RECORD_PAGE_URL =
+	"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=10";
+
 /**
  * オンゲキマイページから取得可能な、各曲の
  * - タイトル
@@ -18,6 +27,7 @@ export type OngekiMypageMusicInfo = {
 export async function getMusicInfoFromOngekiMypage(
 	authFilePath = "./auth.json",
 ) {
+	console.log("getMusicInfoFromOngekiMypage start");
 	const userName = process.env.SEGA_USER_NAME;
 	const password = process.env.SEGA_PASSWORD;
 	if (!userName || !password) {
@@ -26,41 +36,46 @@ export async function getMusicInfoFromOngekiMypage(
 	await saveOngekiMypageAuth(userName, password, authFilePath);
 
 	// ジャンルごとの曲一覧を取得
-	const genreMasterRecordPageUrl =
-		"https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=3";
-	const genreLunaticRecordPageUrl =
-		"https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=10";
+	console.log("getMusicInfoFromOngekiMypage get genre music info start");
+
+	// 4ページの解析を直列で行うと遅い(レスポンスがtimeoutする)ので、2×2の並列でおこなう
+	// (全て一気にPromise.allするとメモリ不足になる)
+	const threads1 = [
+		openOngekiMypageUrl(
+			GENRE_MASTER_RECORD_PAGE_URL,
+			getTitlesWithSectionName,
+			authFilePath,
+		),
+		openOngekiMypageUrl(
+			CHARACTER_MASTER_RECORD_PAGE_URL,
+			getTitlesWithSectionName,
+			authFilePath,
+		),
+	];
+	const threads2 = [
+		openOngekiMypageUrl(
+			GENRE_LUNATIC_RECORD_PAGE_URL,
+			getTitlesWithSectionName,
+			authFilePath,
+		),
+		openOngekiMypageUrl(
+			CHARACTER_LUNATIC_RECORD_PAGE_URL,
+			getTitlesWithSectionName,
+			authFilePath,
+		),
+	];
+	const threadResults1 = await Promise.all(threads1);
+	const threadResults2 = await Promise.all(threads2);
+
 	const titleGenreMap = new Map<string, string>([
-		...(await openOngekiMypageUrl(
-			genreMasterRecordPageUrl,
-			getTitlesWithSectionName,
-			authFilePath,
-		)),
-		...(await openOngekiMypageUrl(
-			genreLunaticRecordPageUrl,
-			getTitlesWithSectionName,
-			authFilePath,
-		)),
+		...threadResults1[0],
+		...threadResults2[0],
 	]);
-
 	// キャラクターごとの曲一覧を取得
-	const characterMasterRecordPageUrl =
-		"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=3";
-	const characterLunaticRecordPageUrl =
-		"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=10";
 	const titleCharacterMap = new Map<string, string>([
-		...(await openOngekiMypageUrl(
-			characterMasterRecordPageUrl,
-			getTitlesWithSectionName,
-			authFilePath,
-		)),
-		...(await openOngekiMypageUrl(
-			characterLunaticRecordPageUrl,
-			getTitlesWithSectionName,
-			authFilePath,
-		)),
+		...threadResults1[1],
+		...threadResults2[1],
 	]);
-
 	// 両方を合わせてOngekiMypageMusicInfoの配列にする
 	const musicInfoList: OngekiMypageMusicInfo[] = [];
 	for (const [title, genre] of titleGenreMap) {
@@ -84,6 +99,7 @@ export async function getMusicInfoFromOngekiMypage(
 		character: "井之原 小星",
 	});
 
+	console.log("getMusicInfoFromOngekiMypage end");
 	return musicInfoList;
 }
 

@@ -113,8 +113,8 @@ resource "google_cloud_run_service" "sheet_scraper" {
           value = var.sega_password
         }
         env {
-          name  = "SPREADSHEET_ID"
-          value = var.spreadsheet_id
+          name  = "SPREAD_SHEET_ID"
+          value = var.spread_sheet_id
         }
         env {
           name  = "SHEET_STORAGE_NAME"

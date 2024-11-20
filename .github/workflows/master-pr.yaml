@@ -108,12 +108,6 @@ jobs:
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
                   echo "env = \"$ENV\"" >> ./terraform.tfvars
 
-            - name: "Copy sheet-scraper/.env"
-              env:
-                  FILE_CONTENT: ${{secrets.SHEET_SCRAPER_ENV}}
-              run: |
-                  echo "$FILE_CONTENT" > ./sheet-scraper/.env
-
             - name: "Plan"
               id: "plan"
               run: |

@@ -13,9 +13,8 @@ RUN pnpm i --frozen-lockfile
 
 COPY ./codes ./codes
 COPY ./tsconfig.json ./
-COPY ./.env ./
 RUN pnpm run build
 
 EXPOSE 8080
 
-CMD ["node", "--env-file",".env", "dist/index.js"]
+CMD ["node", "dist/index.js"]

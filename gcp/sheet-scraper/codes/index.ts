@@ -3,6 +3,8 @@ import { getMusicInfoFromOngekiMypage } from "./getMusicInfoFromOngekiMypage";
 import { getSpreadsheetBeatmapInfos } from "./getSpreadsheetBeatmapInfos";
 import { compileReturnResults } from "./compileReturnResults";
 import { dumpReturnResultCsv } from "./dumpReturnResultCsv";
+import fs from "node:fs";
+import { uploadToSheetStorage } from "./uploadToBucket";
 
 const server = http.createServer(async (req, res) => {
 	console.log(`${req.method} ${req.url}`);
@@ -10,9 +12,10 @@ const server = http.createServer(async (req, res) => {
 	const spreadsheetBeatmapInfos = await getSpreadsheetBeatmapInfos();
 	const results = compileReturnResults(musicInfoList, spreadsheetBeatmapInfos);
 	const resultString = dumpReturnResultCsv(results);
+	fs.writeFileSync("result.csv", resultString);
+	await uploadToSheetStorage("result.csv", "result.csv");
 	res.statusCode = 200;
-	res.setHeader("Content-Type", "text/csv");
-	res.end(resultString);
+	res.end();
 });
 
 server.listen(8080, () => {

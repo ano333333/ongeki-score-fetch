@@ -119,8 +119,14 @@ resource "google_cloud_run_service" "sheet_scraper" {
           name  = "SHEET_STORAGE_NAME"
           value = google_storage_bucket.sheet_storage.name
         }
+        resources {
+          limits = {
+            memory = "2Gi"
+          }
+        }
       }
       service_account_name = google_service_account.sheet_scraper_sa.email
+      timeout_seconds      = 1200
     }
   }
 

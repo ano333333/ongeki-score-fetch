@@ -27,8 +27,11 @@ export async function saveOngekiMypageAuth(
 	password: string,
 	authFilePath = "../auth.json",
 ) {
+	console.log("saveOngekiMypageAuth");
 	const absAuthFilePath = path.resolve(__dirname, authFilePath);
-	const browser = await chromium.launch({ headless: false });
+	const browser = await chromium.launch({
+		headless: true,
+	});
 	const context = await browser.newContext();
 	const page = await context.newPage();
 	await page.goto(OngekiMypageLoginUrl);
@@ -70,4 +73,7 @@ export async function saveOngekiMypageAuth(
 	await page.context().storageState({ path: absAuthFilePath });
 
 	await browser.close();
+
+	console.log("saveOngekiMypageAuth end");
+	console.log(`${absAuthFilePath} saved`);
 }

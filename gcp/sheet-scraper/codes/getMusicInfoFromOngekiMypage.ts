@@ -40,21 +40,20 @@ export async function getMusicInfoFromOngekiMypage(
 
 	// 4ページの解析を直列で行うと遅い(レスポンスがtimeoutする)ので、2×2の並列でおこなう
 	// (全て一気にPromise.allするとメモリ不足になる)
-	const threads1 = [
+	const threads = [
 		openOngekiMypageUrl(
 			GENRE_MASTER_RECORD_PAGE_URL,
 			getTitlesWithSectionName,
 			authFilePath,
 		),
 		openOngekiMypageUrl(
-			CHARACTER_MASTER_RECORD_PAGE_URL,
+			GENRE_LUNATIC_RECORD_PAGE_URL,
 			getTitlesWithSectionName,
 			authFilePath,
 		),
-	];
-	const threads2 = [
+
 		openOngekiMypageUrl(
-			GENRE_LUNATIC_RECORD_PAGE_URL,
+			CHARACTER_MASTER_RECORD_PAGE_URL,
 			getTitlesWithSectionName,
 			authFilePath,
 		),
@@ -64,17 +63,16 @@ export async function getMusicInfoFromOngekiMypage(
 			authFilePath,
 		),
 	];
-	const threadResults1 = await Promise.all(threads1);
-	const threadResults2 = await Promise.all(threads2);
+	const threadResults = await Promise.all(threads);
 
 	const titleGenreMap = new Map<string, string>([
-		...threadResults1[0],
-		...threadResults2[0],
+		...threadResults[0],
+		...threadResults[1],
 	]);
 	// キャラクターごとの曲一覧を取得
 	const titleCharacterMap = new Map<string, string>([
-		...threadResults1[1],
-		...threadResults2[1],
+		...threadResults[2],
+		...threadResults[3],
 	]);
 	// 両方を合わせてOngekiMypageMusicInfoの配列にする
 	const musicInfoList: OngekiMypageMusicInfo[] = [];
@@ -116,6 +114,9 @@ async function getTitlesWithSectionName(page: Page) {
 		throw new Error();
 	}
 
+	const allDivsCount = await musicListDiv.locator("> div").count();
+	console.log(`${page.url()} div number: ${allDivsCount}`);
+
 	// タイトルをkey、セクション名をvalueとするMap
 	const sections = new Map<string, string>();
 
@@ -126,7 +127,11 @@ async function getTitlesWithSectionName(page: Page) {
 	 *  (2.の子孫要素の<div class="music_label p_5 break">のinnerTextが曲タイトルを表す)
 	 */
 	let currentSectionName: string | null = null;
+	let divIndex = 0;
 	for (const child of await musicListDiv.locator("> div").all()) {
+		if (divIndex % 100 === 0) {
+			console.log(`${page.url()} div index: ${divIndex}/${allDivsCount}`);
+		}
 		const tagName = await child.evaluate((el) => el.tagName);
 		if (tagName !== "DIV") {
 			continue;
@@ -155,6 +160,7 @@ async function getTitlesWithSectionName(page: Page) {
 				sections.set(title, currentSectionName);
 			}
 		}
+		divIndex++;
 	}
 	return sections;
 }

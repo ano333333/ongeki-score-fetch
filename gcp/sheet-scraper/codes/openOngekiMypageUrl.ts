@@ -20,7 +20,7 @@ export function openOngekiMypageUrl<T>(
 		let browser: Browser | null = null;
 		try {
 			browser = await chromium.launch({
-				headless: false,
+				headless: true,
 			});
 			const context = await browser.newContext({
 				storageState: absAuthFilePath,

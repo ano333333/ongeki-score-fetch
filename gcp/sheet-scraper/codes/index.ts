@@ -13,7 +13,14 @@ const server = http.createServer(async (req, res) => {
 	const results = compileReturnResults(musicInfoList, spreadsheetBeatmapInfos);
 	const resultString = dumpReturnResultCsv(results);
 	fs.writeFileSync("result.csv", resultString);
-	await uploadToSheetStorage("result.csv", "result.csv");
+	const dateFormat = new Date()
+		.toLocaleString("ja-JP", {
+			timeZone: "Asia/Tokyo",
+		})
+		.replace("/", "-")
+		.replace("/", "-");
+	const fileKey = `result ${dateFormat}.csv`;
+	await uploadToSheetStorage("result.csv", fileKey);
 	res.statusCode = 200;
 	res.end();
 });

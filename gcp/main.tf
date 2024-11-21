@@ -160,6 +160,14 @@ resource "google_storage_bucket_iam_member" "sheet_storage_all_users_reader" {
   member = "allUsers"
 }
 
+# cloud runサービスアカウントに対する、sheet-storageへのstorage.objects.create権限
+resource "google_storage_bucket_iam_member" "sheet_storage_service_account_creator" {
+  bucket = google_storage_bucket.sheet_storage.name
+  role   = "roles/storage.objectCreator"
+  member = "serviceAccount:${google_service_account.sheet_scraper_sa.email}"
+}
+
+
 output "suffix" {
   value = local.suffix
 }

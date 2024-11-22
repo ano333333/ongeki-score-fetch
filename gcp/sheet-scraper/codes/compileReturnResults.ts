@@ -5,6 +5,8 @@ export type ReturnResult = {
 	title: string; // title
 	genre: string; // genre
 	character: string; // character
+	versionMaster: string | null; // MASTERの登場バージョン
+	versionLunatic: string | null; // LUNATICの登場バージョン
 	constants: Array<{
 		difficulty: "BASIC" | "ADVANCED" | "EXPERT" | "MASTER" | "LUNATIC"; // BASIC, ADVANCED, EXPERT, MASTER, LUNATIC
 		constant: number; // constant
@@ -39,6 +41,8 @@ export function compileReturnResults(
 			title: info.title,
 			genre: info.genre,
 			character: info.character,
+			versionMaster: info.versionMaster,
+			versionLunatic: info.versionLunatic,
 			constants,
 		});
 	}

@@ -15,9 +15,7 @@ export function dumpReturnResultCsv(results: ReturnResult[]) {
 			constsMap[c.difficulty] = c.constant;
 		}
 		return {
-			title: result.title,
-			genre: result.genre,
-			character: result.character,
+			...result,
 			constantBasic: constsMap.BASIC,
 			constantAdvanced: constsMap.ADVANCED,
 			constantExpert: constsMap.EXPERT,

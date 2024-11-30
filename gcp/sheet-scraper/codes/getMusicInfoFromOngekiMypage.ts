@@ -170,9 +170,6 @@ async function getTitlesFromStandardRecordPage(
 			throw new Error();
 		}
 
-		const allDivsCount = await musicListDiv.locator("> div").count();
-		console.log(`${page.url()} div number: ${allDivsCount}`);
-
 		// タイトルをkey、セクション名をvalueとするMap
 		const sections = new Map<string, string>();
 
@@ -182,9 +179,14 @@ async function getTitlesFromStandardRecordPage(
 		 * 2. <div class="basic_btn master_score_back m_10 p_5 t_l">: 中のdivのinnerTextが曲タイトルを表す
 		 *  (2.の子孫要素の<div class="music_label p_5 break">のinnerTextが曲タイトルを表す)
 		 */
+		const sectinoOrTitleDivsLocator = musicListDiv.locator(
+			"//div[@class='p_5 f_20' or contains(@class, 'music_label')]",
+		);
+		const allDivsCount = await sectinoOrTitleDivsLocator.count();
+		console.log(`${page.url()} div number: ${allDivsCount}`);
 		let currentSectionName: string | null = null;
 		let divIndex = 0;
-		for (const child of await musicListDiv.locator("> div").all()) {
+		for (const child of await sectinoOrTitleDivsLocator.all()) {
 			if (divIndex % 100 === 0) {
 				console.log(`${page.url()} div index: ${divIndex}/${allDivsCount}`);
 			}
@@ -204,14 +206,8 @@ async function getTitlesFromStandardRecordPage(
 				if (sectionName) {
 					currentSectionName = sectionName;
 				}
-			} else if (
-				classList.findIndex((c) => c === "basic_btn") !== -1 &&
-				classList.findIndex((c) => c === "m_10") !== -1 &&
-				classList.findIndex((c) => c === "p_5") !== -1 &&
-				classList.findIndex((c) => c === "t_l") !== -1
-			) {
-				const titleDiv = await child.locator("div.music_label");
-				const title = await titleDiv.innerText();
+			} else if (classList.findIndex((c) => c === "music_label") !== -1) {
+				const title = await child.innerText();
 				if (title && currentSectionName && title !== "Singularity") {
 					sections.set(title, currentSectionName);
 				}

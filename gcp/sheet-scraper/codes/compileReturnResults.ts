@@ -37,6 +37,11 @@ export function compileReturnResults(
 	const results: ReturnResult[] = [];
 	for (const info of mypageInfos) {
 		const constants = titleConstantsMap.get(info.title) ?? [];
+		// constantsを"BASIC"->"ADVANCED"->"EXPERT"->"MASTER"->"LUNATIC"の順でソート
+		constants.sort((a, b) => {
+			const order = ["BASIC", "ADVANCED", "EXPERT", "MASTER", "LUNATIC"];
+			return order.indexOf(a.difficulty) - order.indexOf(b.difficulty);
+		});
 		results.push({
 			title: info.title,
 			genre: info.genre,

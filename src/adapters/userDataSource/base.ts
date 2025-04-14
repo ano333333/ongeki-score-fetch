@@ -15,6 +15,9 @@ export type UserDataScoreType = {
 	battleHighScore: number;
 	fullBell: boolean;
 	allBreak: boolean;
+	platinumHighScore: number;
+	platinumStar: number; // 0(none),1~5,6(rainbow)
+	platinumMaxScore: number; // NOTE: ongeki-score.netのデータにないためマイページから取得
 };
 
 export interface IUserDataSource {

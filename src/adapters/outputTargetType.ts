@@ -16,6 +16,9 @@ export type OutputTargetDataRowType = {
 	fullBell: boolean;
 	allBreak: boolean;
 	const: number | undefined;
+	platinumHighScore: number;
+	platinumStar: number;
+	platinumMaxScore: number;
 };
 
 export type OutputTargetType<T> = (

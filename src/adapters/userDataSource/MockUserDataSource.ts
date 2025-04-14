@@ -11,6 +11,9 @@ const mockDatas: UserDataScoreType[] = [
 		battleHighScore: 100_0000,
 		fullBell: true,
 		allBreak: true,
+		platinumHighScore: 450,
+		platinumStar: 0,
+		platinumMaxScore: 500,
 	},
 	{
 		difficulty: "ADVANCED",
@@ -22,6 +25,9 @@ const mockDatas: UserDataScoreType[] = [
 		battleHighScore: 100_0000,
 		fullBell: false,
 		allBreak: false,
+		platinumHighScore: 600 * 0.94,
+		platinumStar: 1,
+		platinumMaxScore: 600,
 	},
 	{
 		difficulty: "EXPERT",
@@ -33,6 +39,9 @@ const mockDatas: UserDataScoreType[] = [
 		battleHighScore: 100_0000,
 		fullBell: true,
 		allBreak: true,
+		platinumHighScore: 700 * 0.96,
+		platinumStar: 3,
+		platinumMaxScore: 700,
 	},
 	{
 		difficulty: "MASTER",
@@ -44,6 +53,9 @@ const mockDatas: UserDataScoreType[] = [
 		battleHighScore: 100_0000,
 		fullBell: true,
 		allBreak: true,
+		platinumHighScore: 800 * 0.98,
+		platinumStar: 5,
+		platinumMaxScore: 800,
 	},
 ];
 

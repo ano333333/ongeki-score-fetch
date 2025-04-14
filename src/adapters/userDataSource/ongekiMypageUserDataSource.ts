@@ -125,20 +125,30 @@ export class OngekiMypageUserDataSource implements IUserDataSource {
 					 *       - div(div0div0div0,innerText=レベル)
 					 *     - img
 					 * 　　- div(div0div1,innerText=楽曲名)
-					 *   - table(table,未プレイならばこの要素は存在しない)
-					 *     - tbody(tbody)
+					 *   - table(table0,未プレイならばこの要素は存在しない)
+					 *     - tbody(table0tbody)
 					 *       - tr
-					 *       - tr(tr1)
-					 *         - td(td0,innerText=OVER DAMAGEの%表示 250.84%など)
-					 *         - td(td1,innerText=BATTLE HIGH SCOREの%表示 9,367,060など)
-					 *         - td(td2,innerText=TECHNICAL HIGH SCOREの3桁おきカンマ区切り表示 1,008,956)
-					 *   - div(div1)
-					 *     - img(可良優秀)
-					 *     - img(ランク)
-					 *     - img(div1img2
+					 *       - tr(table0tbodytr1)
+					 *         - td(table0tbodytr1td0,innerText=OVER DAMAGEの%表示 250.84%など)
+					 *         - td(table0tbodytr1td1,innerText=BATTLE HIGH SCOREの%表示 9,367,060など)
+					 *         - td(table0tbodytr1td2,innerText=TECHNICAL HIGH SCOREの3桁おきカンマ区切り表示 1,008,956)
+					 *   - div(div1,未プレイならばこの要素は存在しない)
+					 *     - table(div1table0)
+					 *       - tbody(div1table0tbody)
+					 *         - tr
+					 *         - tr(div1table0tbodytr1)
+					 * 		     - td(div1table0tbodytr1td0)
+					 *             - div#platinum_high_score_star_block(div1table0tbodytr1td0div0,プラチナスコアの星を獲得していなければこの要素は存在しない)
+					 *               - div(div1table0tbodytr1td0div0div0,虹星の場合のみクラス名が"platinum_score_star_r_block_s")
+					 *               - div(div1table0tbodytr1td0div0div1,innerText=platinumStar)
+					 *             - div#platinum_high_score_text_block(div1table0tbodytr1td0div1,innerText=platinumHighScore/platinumMaxScore 1,462 / 1,536)
+					 *     - div(div1div0)
+					 *       - img(可良優秀)
+					 *       - img(ランク)
+					 *       - img(div1div0img2
 					 *           FBならばsrcがhttps://ongeki-net.com/ongeki-mobile/img/music_icon_fb.png?ver=1.35.0
 					 *           FBでなければsrcがhttps://ongeki-net.com/ongeki-mobile/img/music_icon_back.png)
-					 *     - img(div1img3
+					 *       - img(div1div0img3
 					 *           ABならばsrcがhttps://ongeki-net.com/ongeki-mobile/img/music_icon_ab.png?ver=1.35.0
 					 *           ABでなければsrcがhttps://ongeki-net.com/ongeki-mobile/img/music_icon_back.png)
 					 */
@@ -155,7 +165,7 @@ export class OngekiMypageUserDataSource implements IUserDataSource {
 					const name = div0div1.textContent || "";
 					const tables = form.getElementsByTagName("table");
 					//未プレイ
-					if (tables.length === 0) {
+					if (tables.length === 0 || formdivs.length === 1) {
 						datas.push({
 							difficulty: dif,
 							level,
@@ -166,33 +176,89 @@ export class OngekiMypageUserDataSource implements IUserDataSource {
 							battleHighScore: 0,
 							fullBell: false,
 							allBreak: false,
+							platinumHighScore: 0,
+							platinumStar: 0,
+							platinumMaxScore: 0,
 						});
 						continue;
 					}
-					const table = tables[0];
-					const tbody = table.getElementsByTagName("tbody")[0];
-					const tr1 = tbody.getElementsByTagName("tr")[1];
-					const td0 = tr1.getElementsByTagName("td")[0];
-					const overDamageHighScoreStr = td0.textContent || "";
+					const table0 = tables[0];
+					const table0tbody = table0.getElementsByTagName("tbody")[0];
+					const table0tbodytr1 = table0tbody.getElementsByTagName("tr")[1];
+					const table0tbodytr1td0 =
+						table0tbodytr1.getElementsByTagName("td")[0];
+					const overDamageHighScoreStr = table0tbodytr1td0.textContent || "";
 					//「%」を除去し、floatに変換
 					const overDamageHighScore = Number.parseFloat(
 						overDamageHighScoreStr.replace("%", ""),
 					);
-					const td1 = tr1.getElementsByTagName("td")[1];
-					const battleHighScoreStr = td1.textContent || "";
+					const table0tbodytr1td1 =
+						table0tbodytr1.getElementsByTagName("td")[1];
+					const battleHighScoreStr = table0tbodytr1td1.textContent || "";
 					//「,」を除去し、intに変換
 					//("1,033,501" --replace-> "1033,501" --replace-> "1033501" --parseInt-> 1033501)
 					const battleHighScore = Number.parseInt(
 						battleHighScoreStr.replace(",", "").replace(",", ""),
 					);
-					const td2 = tr1.getElementsByTagName("td")[2];
-					const technicalHighScoreStr = td2.textContent || "";
+					const table0tbodytr1td2 =
+						table0tbodytr1.getElementsByTagName("td")[2];
+					const technicalHighScoreStr = table0tbodytr1td2.textContent || "";
 					//「,」を除去し、intに変換
 					const technicalHighScore = Number.parseInt(
 						technicalHighScoreStr.replace(",", "").replace(",", ""),
 					);
 					const div1 = formdivs[1];
-					const div1imgs = div1.getElementsByTagName("img");
+					const div1table0 = div1.getElementsByTagName("table")[0];
+					const div1table0tbody = div1table0.getElementsByTagName("tbody")[0];
+					const div1table0tbodytr1 =
+						div1table0tbody.getElementsByTagName("tr")[1];
+					const div1table0tbodytr1td0 =
+						div1table0tbodytr1.getElementsByTagName("td")[0];
+					const div1table0tbodytr1td0_phssbs =
+						div1table0tbodytr1td0.getElementsByClassName(
+							"platinum_high_score_star_block",
+						);
+					const div1table0tbodytr1td0div0: HTMLDivElement | null =
+						div1table0tbodytr1td0_phssbs.length > 0
+							? (div1table0tbodytr1td0_phssbs[0] as HTMLDivElement)
+							: null;
+					const div1table0tbodytr1td0div0divs =
+						div1table0tbodytr1td0div0?.getElementsByTagName("div");
+					let platinumStar = 0;
+					if (
+						div1table0tbodytr1td0div0divs &&
+						div1table0tbodytr1td0div0divs.length > 0
+					) {
+						const div0 = div1table0tbodytr1td0div0divs[0];
+						if (div0.className === "platinum_score_star_r_block_s") {
+							platinumStar = 6;
+						} else {
+							const div1 = div1table0tbodytr1td0div0divs[1];
+							platinumStar = Number(div1.textContent || "0");
+						}
+					}
+					const div1table0tbodytr1td0div1 =
+						div1table0tbodytr1td0.getElementsByClassName(
+							"platinum_high_score_text_block",
+						)[0];
+					// "1,462 / 1,536" -> ["1,462", "1,536"] -> "1,462"
+					const platinumHighScoreStr = (
+						div1table0tbodytr1td0div1.textContent || ""
+					).split("/")[0];
+					// "1,462 / 1,536" -> ["1,462", "1,536"] -> "1,536"
+					const platinumMaxScoreStr = (
+						div1table0tbodytr1td0div1.textContent || ""
+					).split("/")[1];
+					// "1,462" -> "1462" -> 1462
+					const platinumHighScore = Number.parseInt(
+						platinumHighScoreStr.replace(",", ""),
+					);
+					// "1,536" -> "1536" -> 1536
+					const platinumMaxScore = Number.parseInt(
+						platinumMaxScoreStr.replace(",", ""),
+					);
+					const div1div0 = getDirectDivChildren(div1)[0];
+					const div1imgs = div1div0.getElementsByTagName("img");
 					const fullBell = div1imgs[2].src.includes("fb");
 					const allBreak = div1imgs[3].src.includes("ab");
 					datas.push({
@@ -205,6 +271,9 @@ export class OngekiMypageUserDataSource implements IUserDataSource {
 						battleHighScore,
 						fullBell,
 						allBreak,
+						platinumHighScore,
+						platinumStar,
+						platinumMaxScore,
 					});
 				}
 			}

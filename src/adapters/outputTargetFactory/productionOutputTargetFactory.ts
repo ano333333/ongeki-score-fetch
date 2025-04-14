@@ -75,6 +75,9 @@ export default class ProductionOutputTargetFactory
 			"バトルハイスコア",
 			"All Break",
 			"Full Bell",
+			"プラチナスコアハイスコア",
+			"プラチナスコア星",
+			"プラチナスコアマックススコア",
 		].join(",");
 		const rows = datas.map((data) =>
 			[
@@ -88,6 +91,9 @@ export default class ProductionOutputTargetFactory
 				data.battleHighScore,
 				data.allBreak,
 				data.fullBell,
+				data.platinumHighScore,
+				data.platinumStar,
+				data.platinumMaxScore,
 			].join(","),
 		);
 		return [header, ...rows].join("\n");

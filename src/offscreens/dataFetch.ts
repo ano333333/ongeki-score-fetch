@@ -111,6 +111,9 @@ function combineDatas(
 			fullBell: userData.fullBell,
 			allBreak: userData.allBreak,
 			const: beatmapData?.const,
+			platinumHighScore: userData.platinumHighScore,
+			platinumStar: userData.platinumStar,
+			platinumMaxScore: userData.platinumMaxScore,
 		};
 	});
 }

@@ -173,6 +173,48 @@ resource "google_storage_bucket_iam_member" "sheet_storage_service_account_admin
   member = "serviceAccount:${google_service_account.sheet_scraper_sa.email}"
 }
 
+# sheet-scraperを起動するeventarcに紐付けるpub/subトピック
+resource "google_pubsub_topic" "sheet_scraper_topic" {
+  name = "sheet-scraper-topic-${local.suffix}"
+}
+
+# sheet-scraperを起動するeventarcに紐付けるpub/subサブスクリプションのIAMロール
+resource "google_service_account" "sheet_scraper_subscription_sa" {
+  account_id   = "sheet-scraper-sub-sa-${local.suffix}"
+  display_name = "Service account for pub/sub subscription to Cloud Run sheet-scraper"
+}
+
+# sheet_scraper_subscription_saにcloud runサービスのinvokerロールを付与
+resource "google_cloud_run_service_iam_member" "sheet_scraper_invoker" {
+  service  = google_cloud_run_service.sheet_scraper.name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.sheet_scraper_subscription_sa.email}"
+}
+
+# sheet-scraperを起動するeventarcに紐付けるpub/subサブスクリプション
+resource "google_pubsub_subscription" "sheet_scraper_subscription" {
+  name  = "sheet-scraper-subscription-${local.suffix}"
+  topic = google_pubsub_topic.sheet_scraper_topic.id
+  push_config {
+    oidc_token {
+      service_account_email = google_service_account.sheet_scraper_subscription_sa.email
+    }
+    push_endpoint = google_cloud_run_service.sheet_scraper.status[0].url
+  }
+}
+
+#  sheet_scraper_triggerを起動するscheduler
+resource "google_cloud_scheduler_job" "sheet_scraper_scheduler" {
+  name      = "sheet-scraper-scheduler-${local.suffix}"
+  schedule  = "1 7 * * *"
+  time_zone = "Asia/Tokyo"
+
+  pubsub_target {
+    topic_name = google_pubsub_topic.sheet_scraper_topic.id
+    data       = base64encode(jsonencode({}))
+  }
+}
 
 output "suffix" {
   value = local.suffix

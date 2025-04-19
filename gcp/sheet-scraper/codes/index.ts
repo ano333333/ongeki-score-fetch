@@ -8,25 +8,29 @@ import { uploadToSheetStorage } from "./uploadToBucket";
 import { loadOldCompiledResults } from "./loadOldCompiledResults";
 
 const server = http.createServer(async (req, res) => {
-	console.log(`${req.method} ${req.url}`);
-	const musicInfoList = await getMusicInfoFromOngekiMypage();
-	const spreadsheetBeatmapInfos = await getSpreadsheetBeatmapInfos();
-	const newCompiledResults = compileReturnResults(
-		musicInfoList,
-		spreadsheetBeatmapInfos,
-	);
+	try {
+		console.log(`${req.method} ${req.url}`);
+		const musicInfoList = await getMusicInfoFromOngekiMypage();
+		const spreadsheetBeatmapInfos = await getSpreadsheetBeatmapInfos();
+		const newCompiledResults = compileReturnResults(
+			musicInfoList,
+			spreadsheetBeatmapInfos,
+		);
 
-	const oldCompiledResults = await loadOldCompiledResults("result.csv");
-	if (
-		JSON.stringify(newCompiledResults) !== JSON.stringify(oldCompiledResults)
-	) {
-		const resultString = dumpReturnResultCsv(newCompiledResults);
-		fs.writeFileSync("result.csv", resultString);
-		await uploadToSheetStorage("result.csv", "result.csv");
+		const oldCompiledResults = await loadOldCompiledResults("result.csv");
+		if (
+			JSON.stringify(newCompiledResults) !== JSON.stringify(oldCompiledResults)
+		) {
+			const resultString = dumpReturnResultCsv(newCompiledResults);
+			fs.writeFileSync("result.csv", resultString);
+			await uploadToSheetStorage("result.csv", "result.csv");
+		}
+	} catch (e) {
+		console.error(e);
+	} finally {
+		res.statusCode = 200;
+		res.end();
 	}
-
-	res.statusCode = 200;
-	res.end();
 });
 
 server.listen(8080, () => {

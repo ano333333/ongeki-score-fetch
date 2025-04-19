@@ -11,12 +11,14 @@ export async function loadOldCompiledResults(key: string) {
 	}
 
 	const storage = new Storage();
-	await storage
-		.bucket(sheetStorageName)
-		.file(key)
-		.download({
-			destination: resolve("./result.csv"),
-		});
+	const file = storage.bucket(sheetStorageName).file(key);
+	const [exists] = await file.exists();
+	if (!exists) {
+		return [];
+	}
+	await file.download({
+		destination: resolve("./result.csv"),
+	});
 
 	const readStream = createReadStream(resolve("./result.csv"));
 	const results: ReturnResult[] = [];

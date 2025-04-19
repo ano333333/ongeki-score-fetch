@@ -194,13 +194,17 @@ resource "google_cloud_run_service_iam_member" "sheet_scraper_invoker" {
 
 # sheet-scraperを起動するeventarcに紐付けるpub/subサブスクリプション
 resource "google_pubsub_subscription" "sheet_scraper_subscription" {
-  name  = "sheet-scraper-subscription-${local.suffix}"
-  topic = google_pubsub_topic.sheet_scraper_topic.id
+  name                 = "sheet-scraper-subscription-${local.suffix}"
+  topic                = google_pubsub_topic.sheet_scraper_topic.id
+  ack_deadline_seconds = 600
   push_config {
     oidc_token {
       service_account_email = google_service_account.sheet_scraper_subscription_sa.email
     }
     push_endpoint = google_cloud_run_service.sheet_scraper.status[0].url
+  }
+  retry_policy {
+    minimum_backoff = "600s"
   }
 }
 

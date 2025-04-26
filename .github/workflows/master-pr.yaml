@@ -11,6 +11,8 @@ on:
 
 jobs:
     chrome-extension-build:
+        outputs:
+            is-success: ${{steps.install-dependencies-and-build.outcome}} # 'success' or 'failure'
         runs-on: ubuntu-latest
         defaults:
             run:
@@ -25,6 +27,7 @@ jobs:
                   node-version: "21"
 
             - name: Install dependencies and build
+              id: install-dependencies-and-build
               run: |
                   npm install
                   npm run build

@@ -28,3 +28,29 @@ jobs:
               run: |
                   npm install
                   npm run build
+
+    add-comment-to-pr:
+        runs-on: ubuntu-latest
+        needs:
+            - chrome-extension-build
+        if: always()
+        steps:
+            - name: "Add Success Comment To PR"
+              if: needs.chrome-extension-build.outputs.is-success == 'success'
+              run: |
+                  cat << EOF > pr_comment.md
+                  ## PR Test Pipeline Success
+                  Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+                  EOF
+                  gh pr comment ${{github.event.pull_request.number}} --body-file pr_comment.md
+                  echo "PR Test Pipeline Success"
+
+            - name: "Add Failure Comment To PR"
+              if: needs.chrome-extension-build.outputs.is-success == 'failure'
+              run: |
+                  cat << EOF > pr_comment.md
+                  ## PR Test Pipeline Failed
+                  Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+                  EOF
+                  gh pr comment ${{github.event.pull_request.number}} --body-file pr_comment.md
+                  echo "PR Test Pipeline Failed"

@@ -74,6 +74,12 @@ jobs:
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
                   echo "env = \"$ENV\"" >> ./terraform.tfvars
 
+            - name: "Create sheet-scraper .env"
+              env:
+                  SHEET_SCRAPER_ENV_CONTENT_DEV: ${{secrets.SHEET_SCRAPER_ENV_CONTENT_DEV}}
+              run: |
+                  echo "$SHEET_SCRAPER_ENV_CONTENT_DEV" > ./gcp/sheet-scraper/.env
+
             - name: "Apply"
               id: "apply"
               run: |
@@ -131,6 +137,12 @@ jobs:
                   echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
                   echo "env = \"$ENV\"" >> ./terraform.tfvars
+
+            - name: "Create sheet-scraper .env"
+              env:
+                  SHEET_SCRAPER_ENV_CONTENT_DEV: ${{secrets.SHEET_SCRAPER_ENV_CONTENT_DEV}}
+              run: |
+                  echo "$SHEET_SCRAPER_ENV_CONTENT_DEV" > ./gcp/sheet-scraper/.env
 
             - name: "Plan"
               id: "plan"

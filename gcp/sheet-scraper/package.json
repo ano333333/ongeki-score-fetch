@@ -17,6 +17,7 @@
     "dependencies": {
         "@google-cloud/local-auth": "^3.0.1",
         "@google-cloud/storage": "^7.14.0",
+        "csv-parse": "^5.6.0",
         "csv-stringify": "^6.5.1",
         "google-auth-library": "^9.15.0",
         "googleapis": "^144.0.0",

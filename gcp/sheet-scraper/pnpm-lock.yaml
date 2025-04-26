@@ -14,6 +14,9 @@ importers:
       '@google-cloud/storage':
         specifier: ^7.14.0
         version: 7.14.0
+      csv-parse:
+        specifier: ^5.6.0
+        version: 5.6.0
       csv-stringify:
         specifier: ^6.5.1
         version: 6.5.1
@@ -154,6 +157,9 @@ packages:
 
   create-require@1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
+
+  csv-parse@5.6.0:
+    resolution: {integrity: sha512-l3nz3euub2QMg5ouu5U09Ew9Wf6/wQ8I++ch1loQ0ljmzhmfZYrH9fflS22i/PQEvsPvxCwxgz5q7UB8K1JO4Q==}
 
   csv-stringify@6.5.1:
     resolution: {integrity: sha512-+9lpZfwpLntpTIEpFbwQyWuW/hmI/eHuJZD1XzeZpfZTqkf1fyvBbBLXTJJMsBuuS11uTShMqPwzx4A6ffXgRQ==}
@@ -597,6 +603,8 @@ snapshots:
       delayed-stream: 1.0.0
 
   create-require@1.1.1: {}
+
+  csv-parse@5.6.0: {}
 
   csv-stringify@6.5.1: {}
 

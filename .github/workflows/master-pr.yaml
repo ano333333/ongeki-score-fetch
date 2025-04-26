@@ -139,6 +139,7 @@ jobs:
         needs:
             - chrome-extension-build
             - gcp-apply-new
+            - plan-stg
         if: always()
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

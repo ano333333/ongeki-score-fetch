@@ -1,13 +1,9 @@
 name: github actions on pull-request to master
 
 on:
-    # pull_request:
-    #     branches:
-    #         - "master"
-    # テスト用に、このブランチへのpushで起動
-    push:
+    pull_request:
         branches:
-            - "features/master-pr-github-actions"
+            - "master"
 
 jobs:
     chrome-extension-build:

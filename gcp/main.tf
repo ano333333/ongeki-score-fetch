@@ -40,21 +40,6 @@ locals {
   suffix = var.env != "" ? var.env : random_id.random_suffix.hex
 }
 
-# Artifact Registry APIの有効化
-resource "google_project_service" "artifact_registry_api" {
-  service = "artifactregistry.googleapis.com"
-}
-
-# Cloud Run APIの有効化
-resource "google_project_service" "cloud_run_api" {
-  service = "run.googleapis.com"
-}
-
-# Cloud Scheduler APIの有効化
-resource "google_project_service" "cloud_scheduler_api" {
-  service = "cloudscheduler.googleapis.com"
-}
-
 locals {
   # リポジトリのuri
   repository_uri = "${google_artifact_registry_repository.sheet_scraper_repository.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.sheet_scraper_repository.name}"
@@ -67,8 +52,6 @@ resource "google_artifact_registry_repository" "sheet_scraper_repository" {
   repository_id = "sheet-scraper-repository-${local.suffix}"
   location      = var.region
   format        = "DOCKER"
-
-  depends_on = [google_project_service.artifact_registry_api]
 }
 
 # imageのリビルド判定用に、sheet-scraper/をzip化
@@ -132,7 +115,7 @@ resource "google_cloud_run_service" "sheet_scraper" {
     percent         = 100
   }
 
-  depends_on = [google_project_service.cloud_run_api, google_service_account.sheet_scraper_sa, docker_registry_image.sheet_scraper_image]
+  depends_on = [google_service_account.sheet_scraper_sa, docker_registry_image.sheet_scraper_image]
 }
 
 

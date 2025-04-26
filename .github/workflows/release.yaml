@@ -77,6 +77,10 @@ jobs:
               run: |
                   gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
 
+            - name: "Configure Docker to use GCP Artifact Registry"
+              run: |
+                  gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
+
             - name: "Download prd.tfstate"
               run: |
                   gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/prd.tfstate ./terraform.tfstate

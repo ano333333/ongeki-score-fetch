@@ -6,6 +6,7 @@ import { dumpReturnResultCsv } from "./dumpReturnResultCsv";
 import fs from "node:fs";
 import { uploadToSheetStorage } from "./uploadToBucket";
 import { loadOldCompiledResults } from "./loadOldCompiledResults";
+import { removeOngekiMypageAuth } from "./removeOngekiMypageAuth";
 
 const server = http.createServer(async (req, res) => {
 	try {
@@ -28,6 +29,10 @@ const server = http.createServer(async (req, res) => {
 	} catch (e) {
 		console.error(e);
 	} finally {
+		if (fs.existsSync("result.csv")) {
+			fs.rmSync("result.csv");
+		}
+		removeOngekiMypageAuth();
 		res.statusCode = 200;
 		res.end();
 	}

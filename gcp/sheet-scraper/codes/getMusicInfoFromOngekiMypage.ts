@@ -43,7 +43,7 @@ const VERSION_RECORD_PAGE_URLS: [string, number][] = [
  * を取得
  */
 export async function getMusicInfoFromOngekiMypage(
-	authFilePath = "./auth.json",
+	authFilePath = "../auth.json",
 ) {
 	console.log("getMusicInfoFromOngekiMypage start");
 	const userName = process.env.SEGA_USER_NAME;

@@ -94,12 +94,9 @@ jobs:
                   echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
                   echo "env = \"$ENV\"" >> ./terraform.tfvars
-
-            - name: "Create sheet-scraper .env"
-              env:
-                  SHEET_SCRAPER_ENV_CONTENT_PRD: ${{secrets.SHEET_SCRAPER_ENV_CONTENT_PRD}}
-              run: |
-                  echo "$SHEET_SCRAPER_ENV_CONTENT_PRD" > ./gcp/sheet-scraper/.env
+                  echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
+                  echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
+                  echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
 
             - name: "Apply"
               run: |

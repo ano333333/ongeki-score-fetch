@@ -103,6 +103,18 @@ resource "google_cloud_run_service" "sheet_scraper" {
     spec {
       containers {
         image = local.image_uri
+        env {
+          name  = "SEGA_USER_NAME"
+          value = var.sega_user_name
+        }
+        env {
+          name  = "SEGA_PASSWORD"
+          value = var.sega_password
+        }
+        env {
+          name  = "SPREADSHEET_ID"
+          value = var.spreadsheet_id
+        }
       }
       service_account_name = google_service_account.sheet_scraper_sa.email
     }

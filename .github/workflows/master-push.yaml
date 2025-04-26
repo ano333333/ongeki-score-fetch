@@ -58,3 +58,54 @@ jobs:
             - name: Upload to GCP Cloud Storage
               run: |
                   gsutil cp dist.zip gs://${{secrets.CHROME_EXTENSION_BUILDS_BUCKET}}/${{ steps.info.outputs.filename }}
+
+    apply-terraform:
+        permissions:
+            id-token: write
+            contents: read
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./gcp
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - uses: hashicorp/setup-terraform@v3
+
+            - id: "gcp-auth"
+              name: "Authenticate to GCP"
+              uses: "google-GitHub-actions/auth@v1"
+              with:
+                  create_credentials_file: true
+                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
+                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
+
+            - name: "Activate GCP Service Account"
+              run: |
+                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+
+            - name: "Download stg.tfstate"
+              run: |
+                  gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate ./terraform.tfstate
+
+            - name: "Copy variables.tf"
+              env:
+                  PROJECT_ID: ${{secrets.PROJECT_ID}}
+                  REGION: ${{secrets.REGION}}
+                  ENV: "stg"
+              run: |
+                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
+                  echo "region = \"$REGION\"" >> ./terraform.tfvars
+                  echo "env = \"$ENV\"" >> ./terraform.tfvars
+
+            - name: "Apply"
+              run: |
+                  terraform init
+                  terraform validate
+                  terraform apply -auto-approve
+
+            - name: "Upload stg.tfstate"
+              if: always()
+              run: |
+                  gsutil cp terraform.tfstate gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate

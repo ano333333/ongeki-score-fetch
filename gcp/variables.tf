@@ -27,3 +27,8 @@ variable "spreadsheet_id" {
   description = "スプレッドシートID(sheet-scraperで使用)"
   type        = string
 }
+
+variable "sheet_storage_name" {
+  description = "譜面情報保存用のCloud Storageバケット名(sheet-scraperで使用)"
+  type        = string
+}

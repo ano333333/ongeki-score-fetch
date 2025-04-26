@@ -97,7 +97,7 @@ jobs:
                   echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
                   echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
-
+                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_PRD\"" >> ./terraform.tfvars
             - name: "Apply"
               run: |
                   terraform init

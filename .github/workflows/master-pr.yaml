@@ -76,6 +76,7 @@ jobs:
                   echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
                   echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
+                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
 
             - name: "Apply"
               id: "apply"
@@ -137,6 +138,7 @@ jobs:
                   echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
                   echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
+                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
 
             - name: "Plan"
               id: "plan"

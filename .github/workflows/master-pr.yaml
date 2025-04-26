@@ -144,23 +144,34 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         steps:
-            - name: "Create Comment Body File For Success"
-              if: |
-                  needs.chrome-extension-build.outputs.is-success == 'success' &&
-                  needs.gcp-apply-new.outputs.is-success == 'success' &&
-                  needs.plan-stg.outputs.is-success == 'success'
+            # 3つのジョブの成否を出力する
+            - name: "Judge If All Jobs Succeeded"
+              id: "judge-if-all-jobs-succeeded"
               run: |
+                  echo "chrome-extension-build: ${{needs.chrome-extension-build.outputs.is-success}}"
+                  echo "gcp-apply-new: ${{needs.gcp-apply-new.outputs.is-success}}"
+                  echo "plan-stg: ${{needs.plan-stg.outputs.is-success}}"
+                  if [[ "${{needs.chrome-extension-build.outputs.is-success}}" == 'success' && \
+                        "${{needs.gcp-apply-new.outputs.is-success}}" == 'success' && \
+                        "${{needs.plan-stg.outputs.is-success}}" == 'success' ]]; then
+                      echo "ALL_JOBS_SUCCEEDED=true" >> $GITHUB_ENV
+                  else
+                      echo "ALL_JOBS_SUCCEEDED=false" >> $GITHUB_ENV
+                  fi
+
+            - name: "Create Comment Body File For Success"
+              if: ${{env.ALL_JOBS_SUCCEEDED == 'true'}}
+              run: |
+                  echo "ALL_JOBS_SUCCEEDED: ${{env.ALL_JOBS_SUCCEEDED}}"
                   cat << EOF > pr_comment.md
                   ## PR Test Pipeline Success
                   Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
                   EOF
 
             - name: "Create Comment Body File For Failure"
-              if: |
-                  needs.chrome-extension-build.outputs.is-success == 'failure' ||
-                  needs.gcp-apply-new.outputs.is-success == 'failure' ||
-                  needs.plan-stg.outputs.is-success == 'failure'
+              if: ${{env.ALL_JOBS_SUCCEEDED == 'false'}}
               run: |
+                  echo "ALL_JOBS_SUCCEEDED: ${{env.ALL_JOBS_SUCCEEDED}}"
                   cat << EOF > pr_comment.md
                   ## PR Test Pipeline Failed
                   Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}

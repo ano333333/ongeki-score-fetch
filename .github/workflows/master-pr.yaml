@@ -37,6 +37,8 @@ jobs:
         needs:
             - chrome-extension-build
         if: always()
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         steps:
             - name: "Add Success Comment To PR"
               if: needs.chrome-extension-build.outputs.is-success == 'success'

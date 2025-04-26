@@ -47,7 +47,7 @@ jobs:
                   ## PR Test Pipeline Success
                   Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
                   EOF
-                  gh pr comment ${{github.event.pull_request.number}} --body-file pr_comment.md
+                  gh pr comment --body-file pr_comment.md "${{github.event.pull_request.html_url}}"
                   echo "PR Test Pipeline Success"
 
             - name: "Add Failure Comment To PR"
@@ -57,5 +57,5 @@ jobs:
                   ## PR Test Pipeline Failed
                   Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
                   EOF
-                  gh pr comment ${{github.event.pull_request.number}} --body-file pr_comment.md
+                  gh pr comment --body-file pr_comment.md "${{github.event.pull_request.html_url}}"
                   echo "PR Test Pipeline Failed"

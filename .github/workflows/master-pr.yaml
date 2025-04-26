@@ -40,22 +40,24 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         steps:
-            - name: "Add Success Comment To PR"
+            - name: "Create Comment Body File For Success"
               if: needs.chrome-extension-build.outputs.is-success == 'success'
               run: |
                   cat << EOF > pr_comment.md
                   ## PR Test Pipeline Success
                   Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
                   EOF
-                  gh pr comment --body-file pr_comment.md "${{github.event.pull_request.html_url}}"
-                  echo "PR Test Pipeline Success"
 
-            - name: "Add Failure Comment To PR"
+            - name: "Create Comment Body File For Failure"
               if: needs.chrome-extension-build.outputs.is-success == 'failure'
               run: |
                   cat << EOF > pr_comment.md
                   ## PR Test Pipeline Failed
                   Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
                   EOF
+
+            - name: "Add Comment To PR"
+              if: always()
+              run: |
+                  cat pr_comment.md
                   gh pr comment --body-file pr_comment.md "${{github.event.pull_request.html_url}}"
-                  echo "PR Test Pipeline Failed"

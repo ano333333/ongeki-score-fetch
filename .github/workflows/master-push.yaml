@@ -1,0 +1,60 @@
+name: github actions on push to master
+
+on:
+    push:
+        branches:
+            - "master"
+
+jobs:
+    push-chrome-extension-build:
+        permissions:
+            id-token: write
+            contents: read
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./chrome-extension
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - id: "gcp-auth"
+              name: "Authenticate to GCP"
+              uses: "google-GitHub-actions/auth@v1"
+              with:
+                  create_credentials_file: true
+                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
+                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
+
+            - name: "Activate GCP Service Account"
+              run: |
+                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "21"
+
+            - name: Install dependencies and build
+              run: |
+                  npm install
+                  npm run build
+
+            - name: Zip dist directory
+              run: |
+                  cd dist
+                  zip -r ../dist.zip .
+
+            # 実行時の日時とcommit hashを組み合わせたファイル名を生成
+            # (GitHub Actionsのコンテキストにはローカルのタイムゾーンに合わせた時間が含まれていない)
+            - name: Get zip name
+              id: info
+              run: |
+                  COMMIT_HASH="${{ github.event.head_commit.id }}"
+                  DATE=$(TZ=Asia/Tokyo date "+%Y-%m-%d_%H%M")
+                  FILE_NAME="${DATE}_${COMMIT_HASH}.zip"
+                  echo "::set-output name=filename::$FILE_NAME"
+
+            - name: Upload to GCP Cloud Storage
+              run: |
+                  gsutil cp dist.zip gs://${{secrets.CHROME_EXTENSION_BUILDS_BUCKET}}/${{ steps.info.outputs.filename }}

@@ -117,7 +117,7 @@ resource "google_cloud_run_service" "sheet_scraper" {
         }
         env {
           name  = "SHEET_STORAGE_NAME"
-          value = google_storage_bucket.sheet_storage.name
+          value = "sheet-storage-${local.suffix}"
         }
         resources {
           limits = {

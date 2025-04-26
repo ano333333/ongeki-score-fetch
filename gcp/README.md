@@ -4,6 +4,63 @@
 
 terraformによるGCPのリソース管理を行うためのリポジトリ
 
+## 特に重要な注意点
+
+- cloud run「sheet-scraper」の環境変数(.env)について。terraformのapply時、**terraform.tfvarsの値を引き継いでsheet-scraperの.envを作成する**ため、**sheet-scraperの.env内容を変更する際は.terraform.tfvarsの値も変更する**。またGithub Actionsでのapply用に、*Repository secretsを追加しワークフローを更新する**。
+
+```text
+# sheet-scraper/.env 中略...
+
+# ########################################
+# sheet-scraper/.env新しい環境変数を追加する場合、
+# ########################################
+NEW_ENV=
+```
+
+```tfvars
+# terraform.tfvars 中略...
+
+# ########################################
+# terraform.tfvarsに新しい変数定義を加え、
+# ########################################
+variable "sheet_scraper_new_env" {
+    description = "新しい環境変数"
+    type = string
+}
+```
+
+```tfvars
+# terraform.tfvars 中略...
+
+# ########################################
+# terraform.tfvarsに実際の値を記述する
+# ########################################
+sheet_scraper_new_env = "新しい環境変数の値"
+```
+
+```yaml
+# .github/workflows/master-push.yaml 中略...
+
+# ########################################
+# ワークフローを更新する
+# ########################################
+# jobs: apply-terraform: steps: - name: "Copy variables.tf"
+            - name: "Copy variables.tf"
+              env:
+                  PROJECT_ID: ${{secrets.PROJECT_ID}}
+                  REGION: ${{secrets.REGION}}
+                  ENV: "stg"
+                  SHEET_SCRAPER_NEW_ENV: ${{secrets.SHEET_SCRAPER_NEW_ENV}}
+              run: |
+                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
+                  echo "region = \"$REGION\"" >> ./terraform.tfvars
+                  echo "env = \"$ENV\"" >> ./terraform.tfvars
+                  echo "sheet_scraper_new_env = \"$SHEET_SCRAPER_NEW_ENV\"" >> ./terraform.tfvars
+
+# master-pr.yamlのjobs: apply-new-env: steps: - name: "Copy variables.tf"と、
+# release-push.yamlのjobs: apply-terraform: steps: -name: "Copy variables.tf"も同様に更新する。
+```
+
 ## ディレクトリ構造
 
 .gitignoreされるファイル/ディレクトリは、ファイル名先頭に「*」を付与している。

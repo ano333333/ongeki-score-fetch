@@ -5,7 +5,7 @@
                 情報取得中です
             </Alert>
             <Alert v-else type="success">
-                情報取得可能です
+                情報取得可能ですすすすすすすすす
             </Alert>
         </div>
         <div class="m-2">

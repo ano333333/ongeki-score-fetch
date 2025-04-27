@@ -155,6 +155,8 @@ resource "google_storage_bucket" "sheet_storage" {
   name     = "sheet-storage-${local.suffix}"
   location = var.region
 
+  force_destroy = true
+
   uniform_bucket_level_access = true
 }
 

@@ -1,0 +1,26 @@
+{
+    "name": "sheet-scraper",
+    "version": "1.0.0",
+    "description": "",
+    "main": "codes/index.js",
+    "scripts": {
+        "build": "npx tsc",
+        "dev": "node --env-file .env -r ts-node/register codes/index.ts"
+    },
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@types/node": "^22.9.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.6.3"
+    },
+    "dependencies": {
+        "@google-cloud/local-auth": "^3.0.1",
+        "@google-cloud/storage": "^7.14.0",
+        "csv-parse": "^5.6.0",
+        "csv-stringify": "^6.5.1",
+        "google-auth-library": "^9.15.0",
+        "googleapis": "^144.0.0",
+        "playwright": "^1.48.2"
+    }
+}

@@ -68,11 +68,14 @@ jobs:
               env:
                   PROJECT_ID: ${{secrets.PROJECT_ID}}
                   REGION: ${{secrets.REGION}}
-                  ENV:
+                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
+                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
+                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
+                  SHEET_STORAGE_NAME_STG: ${{secrets.SHEET_STORAGE_NAME_STG}}
               run: |
                   echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
-                  echo "env = \"$ENV\"" >> ./terraform.tfvars
+                  echo "env = \"\"" >> ./terraform.tfvars
                   echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
                   echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars

@@ -90,6 +90,10 @@ jobs:
                   PROJECT_ID: ${{secrets.PROJECT_ID}}
                   REGION: ${{secrets.REGION}}
                   ENV: "prd"
+                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
+                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
+                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
+                  SHEET_STORAGE_NAME_PRD: ${{secrets.SHEET_STORAGE_NAME_PRD}}
               run: |
                   echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
                   echo "region = \"$REGION\"" >> ./terraform.tfvars

@@ -17,6 +17,12 @@ jobs:
               with:
                   node-version: "21"
 
+            - name: "Add env"
+              env:
+                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_PRD}}
+              run: |
+                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
+
             - name: Install dependencies and build
               working-directory: ./chrome-extension
               run: |

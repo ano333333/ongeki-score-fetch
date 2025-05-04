@@ -1,16 +1,34 @@
-name: Build and Release
+name: github actions on push to master
 
 on:
     push:
         branches:
-            - "release"
+            - "master"
 
 jobs:
-    build-and-release:
+    push-chrome-extension-build:
+        permissions:
+            id-token: write
+            contents: read
         runs-on: ubuntu-latest
-
+        defaults:
+            run:
+                working-directory: ./chrome-extension
         steps:
-            - uses: actions/checkout@v3
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - id: "gcp-auth"
+              name: "Authenticate to GCP"
+              uses: "google-GitHub-actions/auth@v1"
+              with:
+                  create_credentials_file: true
+                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
+                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
+
+            - name: "Activate GCP Service Account"
+              run: |
+                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
 
             - name: Setup Node.js
               uses: actions/setup-node@v3
@@ -19,43 +37,33 @@ jobs:
 
             - name: "Add env"
               env:
-                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_PRD}}
+                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
               run: |
                   echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
 
             - name: Install dependencies and build
-              working-directory: ./chrome-extension
               run: |
                   npm install
                   npm run build
 
             - name: Zip dist directory
-              working-directory: ./chrome-extension
               run: |
                   cd dist
                   zip -r ../dist.zip .
 
-            - name: Create Release
-              id: create_release
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: release-${{ github.run_id }}
-                  release_name: "Release: ${{ github.event.head_commit.timestamp }}"
-                  body: ${{ github.event.head_commit.message }}
-                  draft: false
-                  prerelease: false
+            # 実行時の日時とcommit hashを組み合わせたファイル名を生成
+            # (GitHub Actionsのコンテキストにはローカルのタイムゾーンに合わせた時間が含まれていない)
+            - name: Get zip name
+              id: info
+              run: |
+                  COMMIT_HASH="${{ github.event.head_commit.id }}"
+                  DATE=$(TZ=Asia/Tokyo date "+%Y-%m-%d_%H%M")
+                  FILE_NAME="${DATE}_${COMMIT_HASH}.zip"
+                  echo "::set-output name=filename::$FILE_NAME"
 
-            - name: Upload Release Asset
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: ./chrome-extension/dist.zip
-                  asset_name: ongeki-score-fetch-${{ github.run_id }}.zip
-                  asset_content_type: application/zip
+            - name: Upload to GCP Cloud Storage
+              run: |
+                  gsutil cp dist.zip gs://${{secrets.CHROME_EXTENSION_BUILDS_BUCKET}}/${{ steps.info.outputs.filename }}
 
     apply-terraform:
         permissions:
@@ -87,19 +95,19 @@ jobs:
               run: |
                   gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
 
-            - name: "Download prd.tfstate"
+            - name: "Download stg.tfstate"
               run: |
-                  gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/prd.tfstate ./terraform.tfstate
+                  gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate ./terraform.tfstate
 
             - name: "Copy variables.tf"
               env:
                   PROJECT_ID: ${{secrets.PROJECT_ID}}
                   REGION: ${{secrets.REGION}}
-                  ENV: "prd"
+                  ENV: "stg"
                   SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
                   SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
                   SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
-                  SHEET_STORAGE_NAME_PRD: ${{secrets.SHEET_STORAGE_NAME_PRD}}
+                  SHEET_STORAGE_NAME_STG: ${{secrets.SHEET_STORAGE_NAME_STG}}
               run: |
                   echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
@@ -107,14 +115,14 @@ jobs:
                   echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
                   echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
-                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_PRD\"" >> ./terraform.tfvars
+                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
             - name: "Apply"
               run: |
                   terraform init
                   terraform validate
                   terraform apply -auto-approve
 
-            - name: "Upload prd.tfstate"
+            - name: "Upload stg.tfstate"
               if: always()
               run: |
-                  gsutil cp terraform.tfstate gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/prd.tfstate
+                  gsutil cp terraform.tfstate gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate

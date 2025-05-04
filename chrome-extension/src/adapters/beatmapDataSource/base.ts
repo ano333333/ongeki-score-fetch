@@ -6,9 +6,12 @@ export type BeatmapDataDifficultyType =
 	| "LUNATIC";
 
 export type BeatmapDataType = {
-	difficulty: BeatmapDataDifficultyType;
 	name: string;
-	const: number;
+	genre: string | undefined;
+	character: string | undefined;
+	version: string | undefined;
+	difficulty: BeatmapDataDifficultyType;
+	const: number | undefined;
 };
 
 export interface IBeatmapDataSource {

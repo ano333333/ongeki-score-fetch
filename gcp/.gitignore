@@ -1,0 +1,9 @@
+terraform.tfvars
+
+.terraform.lock.hcl
+.terraform
+
+*.tfstate
+*.tfstate.*
+
+sheet-scraper.zip

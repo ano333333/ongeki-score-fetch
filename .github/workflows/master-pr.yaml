@@ -1,0 +1,205 @@
+name: github actions on pull-request to master
+
+on:
+    pull_request:
+        branches:
+            - "master"
+
+permissions:
+    contents: read
+    pull-requests: write
+
+jobs:
+    chrome-extension-build:
+        outputs:
+            is-success: ${{steps.install-dependencies-and-build.outcome}} # 'success' or 'failure'
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./chrome-extension
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "21"
+
+            - name: "Add env"
+              env:
+                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
+              run: |
+                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
+
+            - name: Install dependencies and build
+              id: install-dependencies-and-build
+              run: |
+                  npm install
+                  npm run build
+
+    gcp-apply-new:
+        outputs:
+            is-success: ${{steps.apply.outcome}} # 'success' or 'failure'
+        permissions:
+            id-token: write
+            contents: read
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./gcp
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - uses: hashicorp/setup-terraform@v3
+
+            - id: "gcp-auth"
+              name: "Authenticate to GCP"
+              uses: "google-GitHub-actions/auth@v1"
+              with:
+                  create_credentials_file: true
+                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
+                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
+
+            - name: "Activate GCP Service Account"
+              run: |
+                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+
+            - name: "Configure Docker to use GCP Artifact Registry"
+              run: |
+                  gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
+
+            - name: "Copy variables.tf"
+              env:
+                  PROJECT_ID: ${{secrets.PROJECT_ID}}
+                  REGION: ${{secrets.REGION}}
+                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
+                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
+                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
+                  SHEET_STORAGE_NAME_STG: ${{secrets.SHEET_STORAGE_NAME_STG}}
+              run: |
+                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
+                  echo "region = \"$REGION\"" >> ./terraform.tfvars
+                  echo "env = \"\"" >> ./terraform.tfvars
+                  echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
+                  echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
+                  echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
+                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
+
+            - name: "Apply"
+              id: "apply"
+              run: |
+                  terraform init
+                  terraform validate
+                  terraform apply -auto-approve
+
+            - name: "Destroy"
+              if: always()
+              run: |
+                  terraform destroy -auto-approve
+
+    plan-stg:
+        outputs:
+            is-success: ${{steps.plan.outcome}} # 'success' or 'failure'
+        permissions:
+            id-token: write
+            contents: read
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./gcp
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - uses: hashicorp/setup-terraform@v3
+
+            - id: "gcp-auth"
+              name: "Authenticate to GCP"
+              uses: "google-GitHub-actions/auth@v1"
+              with:
+                  create_credentials_file: true
+                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
+                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
+
+            - name: "Activate GCP Service Account"
+              run: |
+                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+
+            - name: "Configure Docker to use GCP Artifact Registry"
+              run: |
+                  gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
+
+            - name: "Download stg.tfstate"
+              run: |
+                  gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate ./terraform.tfstate
+
+            - name: "Copy variables.tf"
+              env:
+                  PROJECT_ID: ${{secrets.PROJECT_ID}}
+                  REGION: ${{secrets.REGION}}
+                  ENV: "stg"
+              run: |
+                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
+                  echo "region = \"$REGION\"" >> ./terraform.tfvars
+                  echo "env = \"$ENV\"" >> ./terraform.tfvars
+                  echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
+                  echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
+                  echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
+                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
+
+            - name: "Plan"
+              id: "plan"
+              run: |
+                  terraform init
+                  terraform plan
+
+    add-comment-to-pr:
+        runs-on: ubuntu-latest
+        needs:
+            - chrome-extension-build
+            - gcp-apply-new
+            - plan-stg
+        if: always()
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+            # 3つのジョブの成否を出力する
+            - name: "Judge If All Jobs Succeeded"
+              id: "judge-if-all-jobs-succeeded"
+              run: |
+                  echo "chrome-extension-build: ${{needs.chrome-extension-build.outputs.is-success}}"
+                  echo "gcp-apply-new: ${{needs.gcp-apply-new.outputs.is-success}}"
+                  echo "plan-stg: ${{needs.plan-stg.outputs.is-success}}"
+                  if [[ "${{needs.chrome-extension-build.outputs.is-success}}" == 'success' && \
+                        "${{needs.gcp-apply-new.outputs.is-success}}" == 'success' && \
+                        "${{needs.plan-stg.outputs.is-success}}" == 'success' ]]; then
+                      echo "ALL_JOBS_SUCCEEDED=true" >> $GITHUB_ENV
+                  else
+                      echo "ALL_JOBS_SUCCEEDED=false" >> $GITHUB_ENV
+                  fi
+
+            - name: "Create Comment Body File For Success"
+              if: ${{env.ALL_JOBS_SUCCEEDED == 'true'}}
+              run: |
+                  echo "ALL_JOBS_SUCCEEDED: ${{env.ALL_JOBS_SUCCEEDED}}"
+                  cat << EOF > pr_comment.md
+                  ## PR Test Pipeline Success
+                  Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+                  EOF
+
+            - name: "Create Comment Body File For Failure"
+              if: ${{env.ALL_JOBS_SUCCEEDED == 'false'}}
+              run: |
+                  echo "ALL_JOBS_SUCCEEDED: ${{env.ALL_JOBS_SUCCEEDED}}"
+                  cat << EOF > pr_comment.md
+                  ## PR Test Pipeline Failed
+                  Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+                  EOF
+
+            - name: "Add Comment To PR"
+              if: always()
+              run: |
+                  cat pr_comment.md
+                  gh pr comment --body-file pr_comment.md "${{github.event.pull_request.html_url}}"

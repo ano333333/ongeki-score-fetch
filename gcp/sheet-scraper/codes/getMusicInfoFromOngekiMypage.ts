@@ -2,6 +2,7 @@ import type { Page } from "playwright";
 import { openOngekiMypageUrl } from "./openOngekiMypageUrl";
 import { saveOngekiMypageAuth } from "./saveOngekiMypageAuth";
 import { sleep } from "./sleep";
+import { getVersionsFromPremiumRecordPage } from "./getAllVersionsFromPremiumRecordPage";
 
 export type OngekiMypageMusicInfo = {
 	title: string;
@@ -19,21 +20,6 @@ const CHARACTER_MASTER_RECORD_PAGE_URL =
 	"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=3";
 const CHARACTER_LUNATIC_RECORD_PAGE_URL =
 	"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=10";
-
-// [バージョン名, バージョンID]の配列
-// 該当バージョンのMASTER/LUNATICのジャンルごと楽曲別レコードページURLは、`https://ongeki-net.com/ongeki-mobile/record/musicScoreGenre/search/?version=${versionId}&diff=${3/10}`
-const VERSION_RECORD_PAGE_URLS: [string, number][] = [
-	["オンゲキ", 1000],
-	["オンゲキ PLUS", 1005],
-	["SUMMER", 1010],
-	["SUMMER PLUS", 1015],
-	["R.E.D.", 1020],
-	["R.E.D. PLUS", 1025],
-	["bright", 1030],
-	["bright MEMORY Act.1", 1035],
-	["bright MEMORY Act.2", 1040],
-	["bright MEMORY Act.3", 1045],
-];
 
 /**
  * オンゲキマイページから取得可能な、各曲の
@@ -89,7 +75,8 @@ export async function getMusicInfoFromOngekiMypage(
 	await saveOngekiMypageAuth(userName, password, authFilePath);
 	const titleMasterVersionMap = new Map<string, string>();
 	const titleLunaticVersionMap = new Map<string, string>();
-	for (const [versionName, versionId] of VERSION_RECORD_PAGE_URLS) {
+	const versionNameIds = await getVersionsFromPremiumRecordPage(authFilePath);
+	for (const [versionName, versionId] of versionNameIds) {
 		const threads2 = [
 			getTitlesFromPremiumRecordPage(
 				`https://ongeki-net.com/ongeki-mobile/record/musicScoreGenre/search/?version=${versionId}&diff=3`,
@@ -163,6 +150,7 @@ async function getTitlesFromStandardRecordPage(
 	authFilePath: string,
 ) {
 	const callback = async (page: Page) => {
+		console.log(`getTitlesFromStandardRecordPage start: ${url}`);
 		const musicListDivSelector =
 			"body > div.wrapper.main_wrapper.t_c > div.container3";
 		const musicListDiv = await page.locator(musicListDivSelector);
@@ -214,6 +202,8 @@ async function getTitlesFromStandardRecordPage(
 			}
 			divIndex++;
 		}
+		console.log(`getTitlesFromStandardRecordPage end: ${url}`);
+		console.log(sections);
 		return sections;
 	};
 	return openOngekiMypageUrl(url, callback, authFilePath);
@@ -230,12 +220,15 @@ async function getTitlesFromPremiumRecordPage(
 	authFilePath: string,
 ) {
 	const callback = async (page: Page) => {
+		console.log(`getTitlesFromPremiumRecordPage start: ${url}`);
 		// music_labelクラスを含むdivのinnerTextがtitleにあたる
 		const xpath = '//div[contains(@class, "music_label")]';
 		const divs = page.locator(xpath);
 		const divsCount = await divs.count();
 		console.log(`${page.url()} div number: ${divsCount}`);
 		const titles = await divs.allInnerTexts();
+		console.log(`getTitlesFromPremiumRecordPage end: ${url}`);
+		console.log(titles);
 		return titles.filter((title) => title !== "Singularity");
 	};
 	return openOngekiMypageUrl(url, callback, authFilePath);

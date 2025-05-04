@@ -114,6 +114,8 @@ function combineDatas(
 			platinumHighScore: userData.platinumHighScore,
 			platinumStar: userData.platinumStar,
 			platinumMaxScore: userData.platinumMaxScore,
+			character: beatmapData?.character,
+			version: beatmapData?.version,
 		};
 	});
 }

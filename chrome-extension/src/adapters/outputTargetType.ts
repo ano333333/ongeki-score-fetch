@@ -19,6 +19,8 @@ export type OutputTargetDataRowType = {
 	platinumHighScore: number;
 	platinumStar: number;
 	platinumMaxScore: number;
+	character: string | undefined;
+	version: string | undefined;
 };
 
 export type OutputTargetType<T> = (

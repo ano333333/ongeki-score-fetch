@@ -3,70 +3,56 @@ import type {
 	BeatmapDataType,
 	IBeatmapDataSource,
 } from "./base";
+import Papa from "papaparse";
 
 export class OngekiScoreLogBeatmapDataSource implements IBeatmapDataSource {
 	async getBeatmapData(
 		logger: (message: string) => Promise<void>,
 	): Promise<BeatmapDataType[]> {
-		const url = "https://ongeki-score.net/music";
-		const response = await fetch(url);
-		const html = await response.text();
-		const scoreConsts = await this.parseScoreConstHTML(html);
-		console.log(scoreConsts);
-		await logger("譜面情報取得完了");
-		return scoreConsts;
+		await logger("譜面の属性情報を取得開始");
+		// NOTE: キャッシュ戦略を考える
+		const response = await fetch(import.meta.env.VITE_BEATMAP_DATA_SOURCE_URL);
+		const rawDatas = await response.text();
+		const csv = await this.parse(rawDatas);
+		const beatmapDatas = new Array<BeatmapDataType>();
+		for (const row of csv) {
+			const createRow = (
+				row: string[],
+				difficulty: BeatmapDataDifficultyType,
+				versionIndex: number,
+				constIndex: number,
+			) => {
+				beatmapDatas.push({
+					name: row[0],
+					genre: row[1],
+					character: row[2],
+					version: row[versionIndex],
+					difficulty,
+					const: row[constIndex] ? Number(row[constIndex]) : undefined,
+				});
+			};
+			createRow(row, "BASIC", 3, 5);
+			createRow(row, "ADVANCED", 3, 6);
+			createRow(row, "EXPERT", 3, 7);
+			createRow(row, "MASTER", 3, 8);
+			createRow(row, "LUNATIC", 4, 9);
+		}
+		await logger("譜面の属性情報を取得完了");
+		return beatmapDatas;
 	}
 
-	/**
-	 * ongeki-score.net/musicのHTMLを受け取り、譜面定数データを返す
-	 * @param html
-	 * @returns
-	 */
-	private async parseScoreConstHTML(html: string) {
-		const domparser = new DOMParser();
-		const doc = domparser.parseFromString(html, "text/html");
-		if (doc.getElementsByTagName("parseerror").length) {
-			throw new Error("HTML Parse Error");
-		}
-		//譜面定数表のtable要素のtbody要素を取得
-		const tbody_xpath = "/html/body/main/div[1]/article/div[2]/table/tbody";
-		const tbody = doc.evaluate(
-			tbody_xpath,
-			doc,
-			null,
-			XPathResult.FIRST_ORDERED_NODE_TYPE,
-			null,
-		).singleNodeValue;
-		if (tbody === null) {
-			throw new Error("HTML Parse Error");
-		}
-		/*tbodyに含まれるtr要素の構成は、
-		 * tr
-		 * - td
-		 *  - span
-		 *  - a(innerText=name)
-		 * - td(innerTextのUpperCast=difficulity)
-		 * - td
-		 * - td(innerText=const)
-		 * - td
-		 * - td
-		 */
-		const trs = tbody.childNodes;
-		const datas: BeatmapDataType[] = [];
-		for (const tr of trs) {
-			if (tr instanceof HTMLTableRowElement) {
-				const tds = tr.getElementsByTagName("td");
-				const name = tds[0].getElementsByTagName("a")[0].textContent || "";
-				const difficulty = tds[1].textContent?.toUpperCase() || "";
-				const constStr = tds[3].textContent || "";
-				const constNum = Number.parseFloat(constStr);
-				datas.push({
-					name,
-					difficulty: difficulty as BeatmapDataDifficultyType,
-					const: constNum,
-				});
-			}
-		}
-		return datas;
+	parse(csvText: string): Promise<string[][]> {
+		return new Promise((resolve, reject) => {
+			Papa.parse(csvText, {
+				header: false,
+				complete: (results) => {
+					if (results.errors.length > 0) {
+						reject(results.errors);
+					} else {
+						resolve(results.data as string[][]);
+					}
+				},
+			});
+		});
 	}
 }

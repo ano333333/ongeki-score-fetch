@@ -22,6 +22,7 @@ export async function getVersionsFromPremiumRecordPage(authFilePath: string) {
 			}
 		}
 		console.log("getVersionsFromPremiumRecordPage end");
+		console.log(JSON.stringify(versions, null, 0));
 		return versions;
 	};
 	return openOngekiMypageUrl(URL, callback, authFilePath);

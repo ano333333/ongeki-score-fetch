@@ -203,7 +203,7 @@ async function getTitlesFromStandardRecordPage(
 			divIndex++;
 		}
 		console.log(`getTitlesFromStandardRecordPage end: ${url}`);
-		console.log(sections);
+		console.log(JSON.stringify(sections, null, 0));
 		return sections;
 	};
 	return openOngekiMypageUrl(url, callback, authFilePath);
@@ -228,7 +228,7 @@ async function getTitlesFromPremiumRecordPage(
 		console.log(`${page.url()} div number: ${divsCount}`);
 		const titles = await divs.allInnerTexts();
 		console.log(`getTitlesFromPremiumRecordPage end: ${url}`);
-		console.log(titles);
+		console.log(JSON.stringify(titles, null, 0));
 		return titles.filter((title) => title !== "Singularity");
 	};
 	return openOngekiMypageUrl(url, callback, authFilePath);

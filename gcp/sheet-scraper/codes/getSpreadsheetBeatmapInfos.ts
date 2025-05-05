@@ -19,18 +19,7 @@ export async function getSpreadsheetBeatmapInfos() {
 		throw new Error();
 	}
 
-	const sheetNames = [
-		"14+〜15+",
-		"14",
-		"13+",
-		"13",
-		"12+",
-		"12",
-		"11+",
-		"11",
-		"10+",
-		"10",
-	];
+	const sheetNames = ["15+〜14+", "14", "13+", "13", "12+", "12", "11+", "11"];
 	const infos: SpreadsheetBeatmapInfo[] = [];
 	for (const sheetName of sheetNames) {
 		infos.push(

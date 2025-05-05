@@ -8,7 +8,9 @@ on:
 jobs:
     build-and-release:
         runs-on: ubuntu-latest
-
+        defaults:
+            run:
+                working-directory: ./chrome-extension
         steps:
             - uses: actions/checkout@v3
 
@@ -24,13 +26,11 @@ jobs:
                   echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
 
             - name: Install dependencies and build
-              working-directory: ./chrome-extension
               run: |
                   npm install
                   npm run build
 
             - name: Zip dist directory
-              working-directory: ./chrome-extension
               run: |
                   cd dist
                   zip -r ../dist.zip .

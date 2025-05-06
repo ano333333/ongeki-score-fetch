@@ -5,8 +5,15 @@
     "main": "codes/index.js",
     "scripts": {
         "build": "npx tsc",
-        "dev": "node --env-file .env -r ts-node/register codes/index.ts"
+        "dev": "node --env-file .env -r ts-node/register codes/index.ts",
+        "test": "node --env-file .env --experimental-strip-types --test"
     },
+    "pnpm": {
+        "executionEnv": {
+            "nodeVersion": "22.15.0"
+        }
+    },
+    "packageManager": "pnpm@10.10.0",
     "author": "",
     "license": "ISC",
     "devDependencies": {

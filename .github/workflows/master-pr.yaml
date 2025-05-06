@@ -155,12 +155,56 @@ jobs:
                   terraform init
                   terraform plan
 
+    sheet-scraper-test:
+        outputs:
+            is-success: ${{steps.test.outcome}} # 'success' or 'failure'
+        permissions:
+            id-token: write
+            contents: read
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./gcp/sheet-scraper
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "22"
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 10.10.0
+
+            - name: "Install dependencies"
+              run: |
+                  pnpm install
+
+            - name: "Create .env"
+              env:
+                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
+                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
+                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
+              run: |
+                  echo "SEGA_USER_NAME=\"$SEGA_USER_NAME\"" > .env
+                  echo "SEGA_PASSWORD=\"$SEGA_PASSWORD\"" >> .env
+                  echo "SPREAD_SHEET_ID=\"$SPREAD_SHEET_ID\"" >> .env
+                  echo "SHEET_STORAGE_NAME=\"\"" >> .env
+
+            - name: "Test"
+              id: "test"
+              run: |
+                  pnpm test
+
     add-comment-to-pr:
         runs-on: ubuntu-latest
         needs:
             - chrome-extension-build
             - gcp-apply-new
             - plan-stg
+            - sheet-scraper-test
         if: always()
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -172,9 +216,11 @@ jobs:
                   echo "chrome-extension-build: ${{needs.chrome-extension-build.outputs.is-success}}"
                   echo "gcp-apply-new: ${{needs.gcp-apply-new.outputs.is-success}}"
                   echo "plan-stg: ${{needs.plan-stg.outputs.is-success}}"
+                  echo "sheet-scraper-test: ${{needs.sheet-scraper-test.outputs.is-success}}"
                   if [[ "${{needs.chrome-extension-build.outputs.is-success}}" == 'success' && \
                         "${{needs.gcp-apply-new.outputs.is-success}}" == 'success' && \
-                        "${{needs.plan-stg.outputs.is-success}}" == 'success' ]]; then
+                        "${{needs.plan-stg.outputs.is-success}}" == 'success' && \
+                        "${{needs.sheet-scraper-test.outputs.is-success}}" == 'success' ]]; then
                       echo "ALL_JOBS_SUCCEEDED=true" >> $GITHUB_ENV
                   else
                       echo "ALL_JOBS_SUCCEEDED=false" >> $GITHUB_ENV

@@ -6,6 +6,10 @@
     "scripts": {
         "build": "npx tsc",
         "dev": "node --env-file .env -r ts-node/register codes/index.ts"
+    "pnpm": {
+        "executionEnv": {
+            "nodeVersion": "22.15.0"
+        }
     },
     "author": "",
     "license": "ISC",

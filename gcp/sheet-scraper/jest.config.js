@@ -5,4 +5,5 @@ module.exports = {
     "^.+\.tsx?$": ["ts-jest",{}],
   },
   setupFiles: ["dotenv/config"],
+  setupFilesAfterEnv: ["./tests/setup.ts"],
 };

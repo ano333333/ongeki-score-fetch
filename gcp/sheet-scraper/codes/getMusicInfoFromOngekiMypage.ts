@@ -3,6 +3,7 @@ import { openOngekiMypageUrl } from "./openOngekiMypageUrl";
 import { saveOngekiMypageAuth } from "./saveOngekiMypageAuth";
 import { sleep } from "./sleep";
 import { getVersionsFromPremiumRecordPage } from "./getAllVersionsFromPremiumRecordPage";
+import { scrapeStandardRecordPage } from "./logics/scrapeStandardRecordPage";
 
 export type OngekiMypageMusicInfo = {
 	title: string;
@@ -39,35 +40,26 @@ export async function getMusicInfoFromOngekiMypage(
 	}
 	await saveOngekiMypageAuth(userName, password, authFilePath);
 
-	console.log("getMusicInfoFromOngekiMypage get music info start");
-
 	// 1. スタンダードコースの楽曲別レコード一覧から、曲名ごとのジャンル/キャラクターを取得
-	// 4ページの解析を直列で行うと遅い(レスポンスがtimeoutする)ので、並列でおこなう
-	const threads1 = [
-		getTitlesFromStandardRecordPage(GENRE_MASTER_RECORD_PAGE_URL, authFilePath),
-		getTitlesFromStandardRecordPage(
+	const titleGenreMap = new Map<string, string>([
+		...(await getTitlesFromStandardRecordPage(
+			GENRE_MASTER_RECORD_PAGE_URL,
+			authFilePath,
+		)),
+		...(await getTitlesFromStandardRecordPage(
 			GENRE_LUNATIC_RECORD_PAGE_URL,
 			authFilePath,
-		),
-		getTitlesFromStandardRecordPage(
+		)),
+	]);
+	const titleCharacterMap = new Map<string, string>([
+		...(await getTitlesFromStandardRecordPage(
 			CHARACTER_MASTER_RECORD_PAGE_URL,
 			authFilePath,
-		),
-		getTitlesFromStandardRecordPage(
+		)),
+		...(await getTitlesFromStandardRecordPage(
 			CHARACTER_LUNATIC_RECORD_PAGE_URL,
 			authFilePath,
-		),
-	];
-	const threadResults = await Promise.all(threads1);
-
-	const titleGenreMap = new Map<string, string>([
-		...threadResults[0],
-		...threadResults[1],
-	]);
-	// キャラクターごとの曲一覧を取得
-	const titleCharacterMap = new Map<string, string>([
-		...threadResults[2],
-		...threadResults[3],
+		)),
 	]);
 
 	// 2. プレミアムコースの楽曲別レコード一覧から、MASTER/LUNATICの登場バージョンを取得
@@ -140,7 +132,8 @@ export async function getMusicInfoFromOngekiMypage(
 }
 
 /**
- * スタンダードコースの楽曲別レコードページから、曲タイトルとそれが属するセクション名を取得(ただし"Singularity"は除く)
+ * スタンダードコースの楽曲別レコードページから、曲タイトルとそれが属するセクション名を取得
+ * また各アクセスが3秒間隔になるようにsleepを挟む
  * @param url
  * @param authFilePath
  * @returns 曲タイトルをkey、セクション名をvalueとするMap
@@ -151,62 +144,15 @@ async function getTitlesFromStandardRecordPage(
 ) {
 	const callback = async (page: Page) => {
 		console.log(`getTitlesFromStandardRecordPage start: ${url}`);
-		const musicListDivSelector =
-			"body > div.wrapper.main_wrapper.t_c > div.container3";
-		const musicListDiv = await page.locator(musicListDivSelector);
-		if (musicListDiv === null) {
-			throw new Error();
-		}
-
-		// タイトルをkey、セクション名をvalueとするMap
-		const sections = new Map<string, string>();
-
-		/** musicListDivの子をパース
-		 * 次のパターンを持つdivを上から順に検索する
-		 * 1. <div class="p_5 f_20">: innerTextがセクション名を表す
-		 * 2. <div class="basic_btn master_score_back m_10 p_5 t_l">: 中のdivのinnerTextが曲タイトルを表す
-		 *  (2.の子孫要素の<div class="music_label p_5 break">のinnerTextが曲タイトルを表す)
-		 */
-		const sectinoOrTitleDivsLocator = musicListDiv.locator(
-			"//div[@class='p_5 f_20' or contains(@class, 'music_label')]",
-		);
-		const allDivsCount = await sectinoOrTitleDivsLocator.count();
-		console.log(`${page.url()} div number: ${allDivsCount}`);
-		let currentSectionName: string | null = null;
-		let divIndex = 0;
-		for (const child of await sectinoOrTitleDivsLocator.all()) {
-			if (divIndex % 100 === 0) {
-				console.log(`${page.url()} div index: ${divIndex}/${allDivsCount}`);
-			}
-			const tagName = await child.evaluate((el) => el.tagName);
-			if (tagName !== "DIV") {
-				continue;
-			}
-			const classList = (await child.getAttribute("class"))?.split(" ");
-			if (!classList) {
-				continue;
-			}
-			if (
-				classList.findIndex((c) => c === "p_5") !== -1 &&
-				classList.findIndex((c) => c === "f_20") !== -1
-			) {
-				const sectionName = await child.innerText();
-				if (sectionName) {
-					currentSectionName = sectionName;
-				}
-			} else if (classList.findIndex((c) => c === "music_label") !== -1) {
-				const title = await child.innerText();
-				if (title && currentSectionName && title !== "Singularity") {
-					sections.set(title, currentSectionName);
-				}
-			}
-			divIndex++;
-		}
-		console.log(`getTitlesFromStandardRecordPage end: ${url}`);
-		console.log(JSON.stringify(sections, null, 0));
+		const sections = await scrapeStandardRecordPage(await page.content());
 		return sections;
 	};
-	return openOngekiMypageUrl(url, callback, authFilePath);
+	const promises = [
+		openOngekiMypageUrl(url, callback, authFilePath),
+		sleep(3000),
+	];
+	const [sections, _] = await Promise.all(promises);
+	return sections as Map<string, string>;
 }
 
 /**

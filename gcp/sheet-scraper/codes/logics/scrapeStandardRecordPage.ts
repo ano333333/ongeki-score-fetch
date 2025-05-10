@@ -30,6 +30,10 @@ export function scrapeStandardRecordPage(html: string): Map<string, string> {
 	const sectionOrTitleDivs = musicListDiv.querySelectorAll(
 		sectionOrTitleDivsSelector,
 	);
+	// sectionOrTitleDivsSelectorにマッチする要素が無ければエラー画面と考えスロー
+	if (sectionOrTitleDivs.length === 0) {
+		throw new Error();
+	}
 	let currentSectionName: string | null = null;
 	let divIndex = 0;
 	for (const child of sectionOrTitleDivs) {

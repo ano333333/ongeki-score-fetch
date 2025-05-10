@@ -46,4 +46,18 @@ describe("scrapeStandardRecordPage", () => {
 			"./tests/fixtures/stdRecordCharacterMasterPageData.json",
 		);
 	});
+
+	test("should throw error when html contains no div.container3", () => {
+		expect(() =>
+			scrapeStandardRecordPage("<!DOCTYPE html><html><body></body></html>"),
+		).toThrow();
+	});
+
+	test("should throw error when scraping error page", () => {
+		expect(() =>
+			scrapeStandardRecordPage(
+				readFileSync("./tests/fixtures/error.html", "utf-8"),
+			),
+		).toThrow();
+	});
 });

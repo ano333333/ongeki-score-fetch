@@ -2,7 +2,7 @@ import type { Page } from "playwright";
 import { openOngekiMypageUrl } from "./openOngekiMypageUrl";
 import { saveOngekiMypageAuth } from "./saveOngekiMypageAuth";
 import { sleep } from "./sleep";
-import { getVersionsFromPremiumRecordPage } from "./getAllVersionsFromPremiumRecordPage";
+import { scrapePremiumAllVersions as scrapePremiumAllVersionsLogic } from "./logics/scrapePremiumAllVersions";
 import { scrapeStandardRecordPage } from "./logics/scrapeStandardRecordPage";
 
 export type OngekiMypageMusicInfo = {
@@ -13,14 +13,18 @@ export type OngekiMypageMusicInfo = {
 	versionLunatic: string | null; // LUNATIC譜面の登場バージョン
 };
 
-const GENRE_MASTER_RECORD_PAGE_URL =
+const SCRAPE_INTERVAL = 3000;
+
+const STD_GENRE_MASTER_RECORD_PAGE_URL =
 	"https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=3";
-const GENRE_LUNATIC_RECORD_PAGE_URL =
+const STD_GENRE_LUNATIC_RECORD_PAGE_URL =
 	"https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=10";
-const CHARACTER_MASTER_RECORD_PAGE_URL =
+const STD_CHARACTER_MASTER_RECORD_PAGE_URL =
 	"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=3";
-const CHARACTER_LUNATIC_RECORD_PAGE_URL =
+const STD_CHARACTER_LUNATIC_RECORD_PAGE_URL =
 	"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=10";
+const PRM_GENRE_RECORD_PAGE_URL =
+	"https://ongeki-net.com/ongeki-mobile/record/musicScoreGenre/";
 
 /**
  * オンゲキマイページから取得可能な、各曲の
@@ -43,21 +47,21 @@ export async function getMusicInfoFromOngekiMypage(
 	// 1. スタンダードコースの楽曲別レコード一覧から、曲名ごとのジャンル/キャラクターを取得
 	const titleGenreMap = new Map<string, string>([
 		...(await getTitlesFromStandardRecordPage(
-			GENRE_MASTER_RECORD_PAGE_URL,
+			STD_GENRE_MASTER_RECORD_PAGE_URL,
 			authFilePath,
 		)),
 		...(await getTitlesFromStandardRecordPage(
-			GENRE_LUNATIC_RECORD_PAGE_URL,
+			STD_GENRE_LUNATIC_RECORD_PAGE_URL,
 			authFilePath,
 		)),
 	]);
 	const titleCharacterMap = new Map<string, string>([
 		...(await getTitlesFromStandardRecordPage(
-			CHARACTER_MASTER_RECORD_PAGE_URL,
+			STD_CHARACTER_MASTER_RECORD_PAGE_URL,
 			authFilePath,
 		)),
 		...(await getTitlesFromStandardRecordPage(
-			CHARACTER_LUNATIC_RECORD_PAGE_URL,
+			STD_CHARACTER_LUNATIC_RECORD_PAGE_URL,
 			authFilePath,
 		)),
 	]);
@@ -67,7 +71,8 @@ export async function getMusicInfoFromOngekiMypage(
 	await saveOngekiMypageAuth(userName, password, authFilePath);
 	const titleMasterVersionMap = new Map<string, string>();
 	const titleLunaticVersionMap = new Map<string, string>();
-	const versionNameIds = await getVersionsFromPremiumRecordPage(authFilePath);
+	const versionNameIds =
+		await getAllVersionsFromPremiumRecordPage(authFilePath);
 	for (const [versionName, versionId] of versionNameIds) {
 		const threads2 = [
 			getTitlesFromPremiumRecordPage(
@@ -131,6 +136,26 @@ export async function getMusicInfoFromOngekiMypage(
 	return musicInfoList;
 }
 
+async function executeLogicWithHtml<T>(
+	logic: (html: string) => T,
+	url: string,
+	authFilePath: string,
+) {
+	const callback = async (page: Page) => {
+		console.log(`executeLogicWithHtml start: ${url}`);
+		const html = await page.content();
+		const result = await logic(html);
+		console.log(`executeLogicWithHtml end: ${url}`);
+		return result;
+	};
+	const promises = [
+		openOngekiMypageUrl(url, callback, authFilePath),
+		sleep(SCRAPE_INTERVAL),
+	];
+	const [result, _] = await Promise.all(promises);
+	return result as T;
+}
+
 /**
  * スタンダードコースの楽曲別レコードページから、曲タイトルとそれが属するセクション名を取得
  * また各アクセスが3秒間隔になるようにsleepを挟む
@@ -142,17 +167,15 @@ async function getTitlesFromStandardRecordPage(
 	url: string,
 	authFilePath: string,
 ) {
-	const callback = async (page: Page) => {
-		console.log(`getTitlesFromStandardRecordPage start: ${url}`);
-		const sections = await scrapeStandardRecordPage(await page.content());
-		return sections;
-	};
-	const promises = [
-		openOngekiMypageUrl(url, callback, authFilePath),
-		sleep(3000),
-	];
-	const [sections, _] = await Promise.all(promises);
-	return sections as Map<string, string>;
+	return executeLogicWithHtml(scrapeStandardRecordPage, url, authFilePath);
+}
+
+async function getAllVersionsFromPremiumRecordPage(authFilePath: string) {
+	return executeLogicWithHtml(
+		scrapePremiumAllVersionsLogic,
+		PRM_GENRE_RECORD_PAGE_URL,
+		authFilePath,
+	);
 }
 
 /**

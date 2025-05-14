@@ -39,26 +39,31 @@ export async function getMusicInfoFromOngekiMypage(
 
 	// 1. スタンダードコースの楽曲別レコード一覧から、曲名ごとのジャンル/キャラクターを取得
 	const titleGenreMap = new Map<string, string>([
-		...(await getTitlesFromStandardRecordPage(
+		...(await executeLogicWithHtml(
+			scrapeStandardRecordPage,
 			getRecordPageUrl(["standard", "genre", "ALL", "MASTER"]),
 			authFilePath,
 		)),
-		...(await getTitlesFromStandardRecordPage(
+		...(await executeLogicWithHtml(
+			scrapeStandardRecordPage,
 			getRecordPageUrl(["standard", "genre", "ALL", "LUNATIC"]),
 			authFilePath,
 		)),
 	]);
 	const titleCharacterMap = new Map<string, string>([
-		...(await getTitlesFromStandardRecordPage(
+		...(await executeLogicWithHtml(
+			scrapeStandardRecordPage,
 			getRecordPageUrl(["standard", "character", "ALL", "MASTER"]),
 			authFilePath,
 		)),
-		...(await getTitlesFromStandardRecordPage(
+		...(await executeLogicWithHtml(
+			scrapeStandardRecordPage,
 			getRecordPageUrl(["standard", "character", "ALL", "LUNATIC"]),
 			authFilePath,
 		)),
 	]);
-
+	titleGenreMap.delete("Singularity");
+	titleCharacterMap.delete("Singularity");
 	// 2. プレミアムコースの楽曲別レコード一覧から、MASTER/LUNATICの登場バージョンを取得
 	// 再ログインしないとエラーページに飛びやすい
 	await saveOngekiMypageAuth(userName, password, authFilePath);
@@ -129,6 +134,13 @@ export async function getMusicInfoFromOngekiMypage(
 	return musicInfoList;
 }
 
+/**
+ * ページのHTMLを取得し関数に渡す。
+ * またページアクセスからこのPromise終了までがSCRAPE_INTERVALミリ秒になるようにsleepを挟む
+ * @param url
+ * @param authFilePath
+ * @returns 曲タイトルをkey、セクション名をvalueとするMap
+ */
 async function executeLogicWithHtml<T>(
 	logic: (html: string) => T,
 	url: string,
@@ -147,20 +159,6 @@ async function executeLogicWithHtml<T>(
 	];
 	const [result, _] = await Promise.all(promises);
 	return result as T;
-}
-
-/**
- * スタンダードコースの楽曲別レコードページから、曲タイトルとそれが属するセクション名を取得
- * また各アクセスが3秒間隔になるようにsleepを挟む
- * @param url
- * @param authFilePath
- * @returns 曲タイトルをkey、セクション名をvalueとするMap
- */
-async function getTitlesFromStandardRecordPage(
-	url: string,
-	authFilePath: string,
-) {
-	return executeLogicWithHtml(scrapeStandardRecordPage, url, authFilePath);
 }
 
 async function getAllVersionsFromPremiumRecordPage(authFilePath: string) {

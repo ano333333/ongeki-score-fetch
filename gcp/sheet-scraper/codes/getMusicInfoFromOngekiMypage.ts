@@ -1,4 +1,5 @@
 import type { Page } from "playwright";
+import { getRecordPageUrl } from "./logics/getRecordPageUrl";
 import { openOngekiMypageUrl } from "./openOngekiMypageUrl";
 import { saveOngekiMypageAuth } from "./saveOngekiMypageAuth";
 import { sleep } from "./sleep";
@@ -15,14 +16,6 @@ export type OngekiMypageMusicInfo = {
 
 const SCRAPE_INTERVAL = 3000;
 
-const STD_GENRE_MASTER_RECORD_PAGE_URL =
-	"https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=3";
-const STD_GENRE_LUNATIC_RECORD_PAGE_URL =
-	"https://ongeki-net.com/ongeki-mobile/record/musicGenre/search/?genre=99&diff=10";
-const STD_CHARACTER_MASTER_RECORD_PAGE_URL =
-	"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=3";
-const STD_CHARACTER_LUNATIC_RECORD_PAGE_URL =
-	"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=10";
 const PRM_GENRE_RECORD_PAGE_URL =
 	"https://ongeki-net.com/ongeki-mobile/record/musicScoreGenre/";
 
@@ -47,21 +40,21 @@ export async function getMusicInfoFromOngekiMypage(
 	// 1. スタンダードコースの楽曲別レコード一覧から、曲名ごとのジャンル/キャラクターを取得
 	const titleGenreMap = new Map<string, string>([
 		...(await getTitlesFromStandardRecordPage(
-			STD_GENRE_MASTER_RECORD_PAGE_URL,
+			getRecordPageUrl(["standard", "genre", "ALL", "MASTER"]),
 			authFilePath,
 		)),
 		...(await getTitlesFromStandardRecordPage(
-			STD_GENRE_LUNATIC_RECORD_PAGE_URL,
+			getRecordPageUrl(["standard", "genre", "ALL", "LUNATIC"]),
 			authFilePath,
 		)),
 	]);
 	const titleCharacterMap = new Map<string, string>([
 		...(await getTitlesFromStandardRecordPage(
-			STD_CHARACTER_MASTER_RECORD_PAGE_URL,
+			getRecordPageUrl(["standard", "character", "ALL", "MASTER"]),
 			authFilePath,
 		)),
 		...(await getTitlesFromStandardRecordPage(
-			STD_CHARACTER_LUNATIC_RECORD_PAGE_URL,
+			getRecordPageUrl(["standard", "character", "ALL", "LUNATIC"]),
 			authFilePath,
 		)),
 	]);
@@ -76,11 +69,11 @@ export async function getMusicInfoFromOngekiMypage(
 	for (const [versionName, versionId] of versionNameIds) {
 		const threads2 = [
 			getTitlesFromPremiumRecordPage(
-				`https://ongeki-net.com/ongeki-mobile/record/musicScoreGenre/search/?version=${versionId}&diff=3`,
+				getRecordPageUrl(["premium", "genre", versionId, "MASTER"]),
 				authFilePath,
 			),
 			getTitlesFromPremiumRecordPage(
-				`https://ongeki-net.com/ongeki-mobile/record/musicScoreGenre/search/?version=${versionId}&diff=10`,
+				getRecordPageUrl(["premium", "genre", versionId, "LUNATIC"]),
 				authFilePath,
 			),
 		];

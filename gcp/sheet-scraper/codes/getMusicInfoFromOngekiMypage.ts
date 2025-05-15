@@ -17,9 +17,6 @@ export type OngekiMypageMusicInfo = {
 
 const SCRAPE_INTERVAL = 3000;
 
-const PRM_GENRE_RECORD_PAGE_URL =
-	"https://ongeki-net.com/ongeki-mobile/record/musicScoreGenre/";
-
 /**
  * オンゲキマイページから取得可能な、各曲の
  * - タイトル
@@ -70,8 +67,11 @@ export async function getMusicInfoFromOngekiMypage(
 	await saveOngekiMypageAuth(userName, password, authFilePath);
 	const titleMasterVersionMap = new Map<string, string>();
 	const titleLunaticVersionMap = new Map<string, string>();
-	const versionNameIds =
-		await getAllVersionsFromPremiumRecordPage(authFilePath);
+	const versionNameIds = await executeLogicWithHtml(
+		scrapePremiumAllVersionsLogic,
+		getRecordPageUrl(["premium", "genre", "ALL", "MASTER"]),
+		authFilePath,
+	);
 	for (const [versionName, versionId] of versionNameIds) {
 		const threadResultMaster = await executeLogicWithHtml(
 			scrapePremiumRecordPage,
@@ -159,12 +159,4 @@ async function executeLogicWithHtml<T>(
 	];
 	const [result, _] = await Promise.all(promises);
 	return result as T;
-}
-
-async function getAllVersionsFromPremiumRecordPage(authFilePath: string) {
-	return executeLogicWithHtml(
-		scrapePremiumAllVersionsLogic,
-		PRM_GENRE_RECORD_PAGE_URL,
-		authFilePath,
-	);
 }

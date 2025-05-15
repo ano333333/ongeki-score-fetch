@@ -5,6 +5,7 @@ import { saveOngekiMypageAuth } from "./saveOngekiMypageAuth";
 import { sleep } from "./sleep";
 import { scrapePremiumAllVersions as scrapePremiumAllVersionsLogic } from "./logics/scrapePremiumAllVersions";
 import { scrapeStandardRecordPage } from "./logics/scrapeStandardRecordPage";
+import { scrapePremiumRecordPage } from "./logics/scrapePremiumRecordPage";
 
 export type OngekiMypageMusicInfo = {
 	title: string;
@@ -72,25 +73,24 @@ export async function getMusicInfoFromOngekiMypage(
 	const versionNameIds =
 		await getAllVersionsFromPremiumRecordPage(authFilePath);
 	for (const [versionName, versionId] of versionNameIds) {
-		const threads2 = [
-			getTitlesFromPremiumRecordPage(
-				getRecordPageUrl(["premium", "genre", versionId, "MASTER"]),
-				authFilePath,
-			),
-			getTitlesFromPremiumRecordPage(
-				getRecordPageUrl(["premium", "genre", versionId, "LUNATIC"]),
-				authFilePath,
-			),
-		];
-		const [threadResultMaster, threadResultLunatic] =
-			await Promise.all(threads2);
+		const threadResultMaster = await executeLogicWithHtml(
+			scrapePremiumRecordPage,
+			getRecordPageUrl(["premium", "genre", versionId, "MASTER"]),
+			authFilePath,
+		);
+		const threadResultLunatic = await executeLogicWithHtml(
+			scrapePremiumRecordPage,
+			getRecordPageUrl(["premium", "genre", versionId, "LUNATIC"]),
+			authFilePath,
+		);
+		threadResultMaster.filter((title) => title !== "Singularity");
+		threadResultLunatic.filter((title) => title !== "Singularity");
 		for (const title of threadResultMaster) {
 			titleMasterVersionMap.set(title, versionName);
 		}
 		for (const title of threadResultLunatic) {
 			titleLunaticVersionMap.set(title, versionName);
 		}
-		await sleep(3000);
 	}
 
 	// 3. 1と2を合わせてOngekiMypageMusicInfoの配列にする
@@ -167,29 +167,4 @@ async function getAllVersionsFromPremiumRecordPage(authFilePath: string) {
 		PRM_GENRE_RECORD_PAGE_URL,
 		authFilePath,
 	);
-}
-
-/**
- * プレミアムコースの楽曲別レコードページから、曲タイトルを取得(ただし"Singularity"は除く)
- * @param url
- * @param authFilePath
- * @returns 曲タイトルの配列
- */
-async function getTitlesFromPremiumRecordPage(
-	url: string,
-	authFilePath: string,
-) {
-	const callback = async (page: Page) => {
-		console.log(`getTitlesFromPremiumRecordPage start: ${url}`);
-		// music_labelクラスを含むdivのinnerTextがtitleにあたる
-		const xpath = '//div[contains(@class, "music_label")]';
-		const divs = page.locator(xpath);
-		const divsCount = await divs.count();
-		console.log(`${page.url()} div number: ${divsCount}`);
-		const titles = await divs.allInnerTexts();
-		console.log(`getTitlesFromPremiumRecordPage end: ${url}`);
-		console.log(JSON.stringify(titles, null, 0));
-		return titles.filter((title) => title !== "Singularity");
-	};
-	return openOngekiMypageUrl(url, callback, authFilePath);
 }

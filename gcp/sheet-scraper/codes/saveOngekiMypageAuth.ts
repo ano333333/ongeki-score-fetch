@@ -1,6 +1,6 @@
 import path from "node:path";
 import { chromium } from "playwright";
-import { sleep } from "./sleep";
+import { sleep } from "./utils/sleep";
 
 const OngekiMypageLoginUrl = "https://ongeki-net.com/ongeki-mobile/";
 const OngekiMypageAimeListUrl =

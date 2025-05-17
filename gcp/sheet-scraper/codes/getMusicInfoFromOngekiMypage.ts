@@ -2,7 +2,7 @@ import type { Page } from "playwright";
 import { getRecordPageUrl } from "./logics/getRecordPageUrl";
 import { openOngekiMypageUrl } from "./openOngekiMypageUrl";
 import { saveOngekiMypageAuth } from "./saveOngekiMypageAuth";
-import { sleep } from "./sleep";
+import { sleep } from "./utils/sleep";
 import { scrapePremiumAllVersions as scrapePremiumAllVersionsLogic } from "./logics/scrapePremiumAllVersions";
 import { scrapeStandardRecordPage } from "./logics/scrapeStandardRecordPage";
 import { scrapePremiumRecordPage } from "./logics/scrapePremiumRecordPage";

@@ -1,6 +1,6 @@
 import type { Browser, Page } from "playwright";
 import { chromium } from "playwright";
-import { sleep } from "./sleep";
+import { sleep } from "./utils/sleep";
 import path from "node:path";
 
 /**

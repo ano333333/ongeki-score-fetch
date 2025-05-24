@@ -1,23 +1,9 @@
 {
-    "title1-1": "genre1",
-    "title1-2": "genre1",
-    "title1-3": "genre1",
     "title1-4": "genre1",
-    "title2-1": "genre2",
-    "title2-2": "genre2",
-    "title2-3": "genre2",
     "title2-4": "genre2",
-    "title3-1": "genre3",
-    "title3-2": "genre3",
-    "title3-3": "genre3",
     "title3-4": "genre3",
-    "title4-1": "genre4",
-    "title4-2": "genre4",
-    "title4-3": "genre4",
     "title4-4": "genre4",
-    "title5-1": "genre5",
-    "title5-2": "genre5",
-    "title5-3": "genre5",
     "title5-4": "genre5",
-    "title-common": "genre3"
+    "title-common": "genre3",
+    "title-lunatic-only": "genre3"
 }

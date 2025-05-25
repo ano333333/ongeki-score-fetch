@@ -1,4 +1,3 @@
-import { isNumberObject } from "node:util/types";
 import type { DifficultyType } from "./difficultyType";
 
 const recordPageBaseUrl = "https://ongeki-net.com/ongeki-mobile/record";

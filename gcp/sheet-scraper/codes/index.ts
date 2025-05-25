@@ -3,7 +3,6 @@ import { getSpreadsheetBeatmapInfos } from "./getSpreadsheetBeatmapInfos";
 import { dumpReturnResultCsv } from "./dumpReturnResultCsv";
 import fs from "node:fs";
 import { uploadToSheetStorage } from "./utils/uploadToSheetStorage";
-import { removeOngekiMypageAuth } from "./removeOngekiMypageAuth";
 import { getStdRecordPageMusicDatas } from "./logics/getStdRecordPageMusicDatas";
 import { saveOngekiMypageAuth } from "./utils/saveOngekiMypageAuth";
 import { scrapeHtml } from "./utils/scrapeHtml";
@@ -89,7 +88,9 @@ const server = http.createServer(async (req, res) => {
 		if (fs.existsSync(localCsvPath)) {
 			fs.rmSync(localCsvPath);
 		}
-		removeOngekiMypageAuth();
+		if (fs.existsSync(authFilePath)) {
+			fs.rmSync(authFilePath);
+		}
 		res.statusCode = 200;
 		res.end();
 		console.log("end");

@@ -119,6 +119,10 @@ resource "google_cloud_run_service" "sheet_scraper" {
           name  = "SHEET_STORAGE_NAME"
           value = "sheet-storage-${local.suffix}"
         }
+        env {
+          name  = "CURRENT_ONGEKI_VERSION_NAME"
+          value = var.current_ongeki_version_name
+        }
         resources {
           limits = {
             memory = "2Gi"

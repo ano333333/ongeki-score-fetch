@@ -11,7 +11,7 @@ export function getRecordPageUrl(
 	prop:
 		| ["standard", "genre", "ALL", DifficultyType]
 		| ["standard", "character", "ALL", DifficultyType]
-		| ["premium", "genre", number, DifficultyType],
+		| ["premium", "genre", number | "ALL", DifficultyType],
 ) {
 	if (prop[0] === "standard" && prop[1] === "genre") {
 		return `${recordPageBaseUrl}/musicGenre/search/?genre=99&diff=${getDifficultyUrlId(prop[3])}`;
@@ -19,7 +19,7 @@ export function getRecordPageUrl(
 	if (prop[0] === "standard" && prop[1] === "character") {
 		return `${recordPageBaseUrl}/musicCharacter/search/?chara=99&diff=${getDifficultyUrlId(prop[3])}`;
 	}
-	return `${recordPageBaseUrl}/musicScoreGenre/search/?version=${prop[2]}&diff=${getDifficultyUrlId(prop[3])}`;
+	return `${recordPageBaseUrl}/musicScoreGenre/search/?version=${prop[2] === "ALL" ? 99 : prop[2]}&diff=${getDifficultyUrlId(prop[3])}`;
 }
 
 function getDifficultyUrlId(

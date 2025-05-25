@@ -45,7 +45,7 @@ export function scrapeStandardRecordPage(html: string): Map<string, string> {
 			}
 		} else if (classList.contains("music_label")) {
 			const title = child.textContent;
-			if (title && currentSectionName && title !== "Singularity") {
+			if (title && currentSectionName) {
 				sections.set(title, currentSectionName);
 			}
 		}

@@ -27,3 +27,8 @@ variable "spread_sheet_id" {
   description = "スプレッドシートID(sheet-scraperで使用)"
   type        = string
 }
+
+variable "current_ongeki_version_name" {
+  description = "現在のオンゲキのバージョン名"
+  type        = string
+}

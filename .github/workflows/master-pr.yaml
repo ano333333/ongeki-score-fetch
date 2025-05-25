@@ -78,6 +78,7 @@ jobs:
                   SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
                   SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
                   SHEET_STORAGE_NAME_STG: ${{secrets.SHEET_STORAGE_NAME_STG}}
+                  CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
               run: |
                   echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
@@ -86,6 +87,7 @@ jobs:
                   echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
                   echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
+                  echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
 
             - name: "Apply"
               id: "apply"
@@ -148,7 +150,7 @@ jobs:
                   echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
                   echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
-
+                  echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
             - name: "Plan"
               id: "plan"
               run: |
@@ -187,12 +189,13 @@ jobs:
                   SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
                   SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
                   SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
+                  CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
               run: |
                   echo "SEGA_USER_NAME=\"$SEGA_USER_NAME\"" > .env
                   echo "SEGA_PASSWORD=\"$SEGA_PASSWORD\"" >> .env
                   echo "SPREAD_SHEET_ID=\"$SPREAD_SHEET_ID\"" >> .env
                   echo "SHEET_STORAGE_NAME=\"\"" >> .env
-
+                  echo "CURRENT_ONGEKI_VERSION_NAME=\"$CURRENT_ONGEKI_VERSION_NAME\"" >> .env
             - name: "Test"
               id: "test"
               run: |

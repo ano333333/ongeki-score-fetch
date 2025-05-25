@@ -1,0 +1,37 @@
+{
+    "title1-4": {
+        "title": "title1-4",
+        "genre": "genre1",
+        "character": "character1"
+    },
+    "title2-4": {
+        "title": "title2-4",
+        "genre": "genre2",
+        "character": "character2"
+    },
+    "title3-4": {
+        "title": "title3-4",
+        "genre": "genre3",
+        "character": "character3"
+    },
+    "title4-4": {
+        "title": "title4-4",
+        "genre": "genre4",
+        "character": "character4"
+    },
+    "title5-4": {
+        "title": "title5-4",
+        "genre": "genre5",
+        "character": "character5"
+    },
+    "title-common": {
+        "title": "title-common",
+        "genre": "genre3",
+        "character": "character3"
+    },
+    "title-lunatic-only": {
+        "title": "title-lunatic-only",
+        "genre": "genre3",
+        "character": "character3"
+    }
+}

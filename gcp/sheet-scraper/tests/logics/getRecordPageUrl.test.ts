@@ -15,8 +15,11 @@ describe("getRecordGenrePageUrl", () => {
 		expect(getRecordPageUrl(["standard", "character", "ALL", "MASTER"])).toBe(
 			"https://ongeki-net.com/ongeki-mobile/record/musicCharacter/search/?chara=99&diff=3",
 		);
-		expect(getRecordPageUrl(["premium", "genre", 99, "LUNATIC"])).toBe(
+		expect(getRecordPageUrl(["premium", "genre", "ALL", "LUNATIC"])).toBe(
 			"https://ongeki-net.com/ongeki-mobile/record/musicScoreGenre/search/?version=99&diff=10",
+		);
+		expect(getRecordPageUrl(["premium", "genre", 1000, "MASTER"])).toBe(
+			"https://ongeki-net.com/ongeki-mobile/record/musicScoreGenre/search/?version=1000&diff=3",
 		);
 	});
 });

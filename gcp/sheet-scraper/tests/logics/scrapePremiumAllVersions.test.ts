@@ -4,10 +4,16 @@ import { scrapePremiumAllVersions } from "../../codes/logics/scrapePremiumAllVer
 
 describe("scrapePremiumAllVersions", () => {
 	test("should scrape premium record page correctly", () => {
-		const html = readFileSync("./tests/fixtures/prmRecordGenre.html", "utf-8");
+		const html = readFileSync(
+			"./tests/fixtures/prmRecordGenreMasterPage.html",
+			"utf-8",
+		);
 		const result = scrapePremiumAllVersions(html);
 		const expectedResult = JSON.parse(
-			readFileSync("./tests/fixtures/prmRecordGenreData.json", "utf-8"),
+			readFileSync(
+				"./tests/fixtures/prmRecordGenreMasterPageVersions.json",
+				"utf-8",
+			),
 		);
 		expect(result).toEqual(expectedResult);
 	});

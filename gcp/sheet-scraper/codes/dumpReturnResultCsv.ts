@@ -1,34 +1,29 @@
 import { stringify } from "csv-stringify/sync";
-import type { ReturnResult } from "./compileReturnResults";
+import type { ResultCsvRowType } from "./logics/resultCsvRowType";
 
-export function dumpReturnResultCsv(results: ReturnResult[]) {
+/**
+ * データをcsv文字列に変換する
+ * @param results
+ * @returns
+ */
+export function dumpReturnResultCsv(results: Map<string, ResultCsvRowType>) {
 	// ReturnResult["constants"]の部分を展開してcsvの行にする
-	const convToCsvRow = (result: ReturnResult) => {
-		const constsMap = {
-			BASIC: null as null | number,
-			ADVANCED: null as null | number,
-			EXPERT: null as null | number,
-			MASTER: null as null | number,
-			LUNATIC: null as null | number,
-		};
-		for (const c of result.constants) {
-			constsMap[c.difficulty] = c.constant;
-		}
+	const convToCsvRow = (result: ResultCsvRowType) => {
 		return {
 			title: result.title,
 			genre: result.genre,
 			character: result.character,
-			versionMaster: result.versionMaster,
-			versionLunatic: result.versionLunatic,
-			constantBasic: constsMap.BASIC,
-			constantAdvanced: constsMap.ADVANCED,
-			constantExpert: constsMap.EXPERT,
-			constantMaster: constsMap.MASTER,
-			constantLunatic: constsMap.LUNATIC,
+			versionMaster: result.versionMaster ?? "",
+			versionLunatic: result.versionLunatic ?? "",
+			constantBasic: result.constants.BASIC ?? "",
+			constantAdvanced: result.constants.ADVANCED ?? "",
+			constantExpert: result.constants.EXPERT ?? "",
+			constantMaster: result.constants.MASTER ?? "",
+			constantLunatic: result.constants.LUNATIC ?? "",
 		};
 	};
 	// csvのヘッダ(title, genre, character, ...)
-	const csvResults = results.map(convToCsvRow);
+	const csvResults = Array.from(results.values()).map(convToCsvRow);
 	const headers = Object.keys(csvResults[0]);
 	return stringify(csvResults, {
 		columns: headers.map((header) => ({ key: header })),

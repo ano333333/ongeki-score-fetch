@@ -1,6 +1,5 @@
-import path from "node:path";
 import { chromium } from "playwright";
-import { sleep } from "./utils/sleep";
+import { sleep } from "./sleep";
 
 const OngekiMypageLoginUrl = "https://ongeki-net.com/ongeki-mobile/";
 const OngekiMypageAimeListUrl =
@@ -25,10 +24,9 @@ const AimeSelectButtonSelector =
 export async function saveOngekiMypageAuth(
 	userName: string,
 	password: string,
-	authFilePath = "../auth.json",
+	authFilePath: string,
 ) {
 	console.log("saveOngekiMypageAuth");
-	const absAuthFilePath = path.resolve(__dirname, authFilePath);
 	const browser = await chromium.launch({
 		headless: true,
 	});
@@ -70,10 +68,10 @@ export async function saveOngekiMypageAuth(
 	}
 
 	// ongeki-net.comのcookieを保存
-	await page.context().storageState({ path: absAuthFilePath });
+	await page.context().storageState({ path: authFilePath });
 
 	await browser.close();
 
 	console.log("saveOngekiMypageAuth end");
-	console.log(`${absAuthFilePath} saved`);
+	console.log(`${authFilePath} saved`);
 }

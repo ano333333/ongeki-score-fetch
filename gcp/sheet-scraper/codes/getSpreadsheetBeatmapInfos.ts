@@ -2,10 +2,12 @@ import { google, type sheets_v4 } from "googleapis";
 import fs from "node:fs";
 import path from "node:path";
 import type { JWT } from "google-auth-library";
+import type { RecordConstsType } from "./logics/recordConstsType";
+import type { DifficultyType } from "./logics/difficultyType";
 
-export type SpreadsheetBeatmapInfo = {
+export type SpreadsheetRowType = {
 	title: string;
-	difficulty: "BASIC" | "ADVANCED" | "EXPERT" | "MASTER" | "LUNATIC";
+	difficulty: DifficultyType;
 	constant: number;
 };
 
@@ -20,14 +22,14 @@ export async function getSpreadsheetBeatmapInfos() {
 	}
 
 	const sheetNames = ["15+〜14+", "14", "13+", "13", "12+", "12", "11+", "11"];
-	const infos: SpreadsheetBeatmapInfo[] = [];
+	const infos: SpreadsheetRowType[] = [];
 	for (const sheetName of sheetNames) {
 		infos.push(
 			...(await getBeatmapInfosFromSheet(sheetsapi, sheetId, sheetName)),
 		);
 	}
-
-	return infos;
+	const merged = mergeSpreadsheetRows(infos);
+	return merged;
 }
 
 async function getSheetsApi() {
@@ -99,7 +101,7 @@ async function getBeatmapInfosFromSheet(
 		}
 	}
 
-	const infos: SpreadsheetBeatmapInfo[] = [];
+	const consts: SpreadsheetRowType[] = [];
 	/**
 	 * 各行は
 	 * - 曲名
@@ -112,10 +114,32 @@ async function getBeatmapInfosFromSheet(
 	for (const musicRow of musicRows) {
 		for (const column of musicRow) {
 			const title = column[0] as string;
-			const difficulty = column[1] as SpreadsheetBeatmapInfo["difficulty"];
+			const difficulty = column[1] as DifficultyType;
 			const constant = Number(column[4]);
-			infos.push({ title, difficulty, constant });
+			consts.push({ title, difficulty, constant });
 		}
 	}
-	return infos;
+	return consts;
+}
+
+function mergeSpreadsheetRows(rows: SpreadsheetRowType[]) {
+	const result = new Map<string, RecordConstsType>();
+	for (const row of rows) {
+		let map = result.get(row.title);
+		if (!map) {
+			map = {
+				title: row.title,
+				consts: {
+					BASIC: undefined,
+					ADVANCED: undefined,
+					EXPERT: undefined,
+					MASTER: undefined,
+					LUNATIC: undefined,
+				},
+			};
+		}
+		map.consts[row.difficulty] = row.constant;
+		result.set(row.title, map);
+	}
+	return result;
 }

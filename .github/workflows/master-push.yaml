@@ -109,6 +109,7 @@ jobs:
                   SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
                   SHEET_STORAGE_NAME_STG: ${{secrets.SHEET_STORAGE_NAME_STG}}
                   CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
+                  SHEET_SCRAPER_SCHEDULE: ${{secrets.SHEET_SCRAPER_SCHEDULE_STG}}
               run: |
                   echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
@@ -118,6 +119,7 @@ jobs:
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
                   echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
                   echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
+                  echo "sheet_scraper_schedule = \"$SHEET_SCRAPER_SCHEDULE\"" >> ./terraform.tfvars
             - name: "Apply"
               run: |
                   terraform init

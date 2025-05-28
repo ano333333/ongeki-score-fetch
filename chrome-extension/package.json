@@ -7,7 +7,8 @@
         "dev": "vite",
         "build": "vue-tsc && vite build",
         "preview": "vite preview",
-        "test": "vitest --browser=chromium"
+        "test": "vitest --browser=chromium",
+        "test:ci": "vitest --browser.headless --run"
     },
     "dependencies": {
         "@headlessui/vue": "^1.7.16",
@@ -23,6 +24,7 @@
         "@vitejs/plugin-vue": "^4.2.3",
         "@vitest/browser": "^3.1.4",
         "autoprefixer": "^10.4.16",
+        "playwright": "^1.52.0",
         "postcss": "^8.4.31",
         "tailwindcss": "^3.3.3",
         "typescript": "^5.0.2",

@@ -216,7 +216,7 @@ resource "google_pubsub_subscription" "sheet_scraper_subscription" {
 #  sheet_scraper_triggerを起動するscheduler
 resource "google_cloud_scheduler_job" "sheet_scraper_scheduler" {
   name      = "sheet-scraper-scheduler-${local.suffix}"
-  schedule  = "5 7 * * *"
+  schedule  = var.sheet_scraper_schedule
   time_zone = "Asia/Tokyo"
 
   pubsub_target {

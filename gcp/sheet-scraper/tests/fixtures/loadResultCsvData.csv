@@ -1,0 +1,4 @@
+title,genre,character,versionMaster,versionLunatic,constantBasic,constantAdvanced,constantExpert,constantMaster,constantLunatic
+title1,genre1,character1,version1,version1,2.0,6.0,10.0,13.0,14.0
+title2,genre2,character2,version2,,,,,13.0,
+title3,genre3,character3,,version3,,,,,14.0

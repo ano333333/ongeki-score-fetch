@@ -119,6 +119,10 @@ resource "google_cloud_run_service" "sheet_scraper" {
           name  = "SHEET_STORAGE_NAME"
           value = "sheet-storage-${local.suffix}"
         }
+        env {
+          name  = "CURRENT_ONGEKI_VERSION_NAME"
+          value = var.current_ongeki_version_name
+        }
         resources {
           limits = {
             memory = "2Gi"
@@ -212,7 +216,7 @@ resource "google_pubsub_subscription" "sheet_scraper_subscription" {
 #  sheet_scraper_triggerを起動するscheduler
 resource "google_cloud_scheduler_job" "sheet_scraper_scheduler" {
   name      = "sheet-scraper-scheduler-${local.suffix}"
-  schedule  = "5 7 * * *"
+  schedule  = var.sheet_scraper_schedule
   time_zone = "Asia/Tokyo"
 
   pubsub_target {

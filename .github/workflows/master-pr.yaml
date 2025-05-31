@@ -38,6 +38,42 @@ jobs:
                   npm install
                   npm run build
 
+    chrome-extension-test:
+        runs-on: ubuntu-latest
+        outputs:
+            is-success: ${{steps.test.outcome}} # 'success' or 'failure'
+        permissions:
+            id-token: write
+            contents: read
+        defaults:
+            run:
+                working-directory: ./chrome-extension
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+
+            - name: "Install dependencies"
+              run: |
+                  npm install
+
+            - name: "Install Playwright Browsers"
+              run: npx playwright install --with-deps
+
+            - name: "Add Env"
+              env:
+                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
+              run: |
+                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
+
+            - name: "Test"
+              id: "test"
+              run: |
+                  npm run test:ci
+
     gcp-apply-new:
         outputs:
             is-success: ${{steps.apply.outcome}} # 'success' or 'failure'
@@ -78,6 +114,8 @@ jobs:
                   SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
                   SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
                   SHEET_STORAGE_NAME_STG: ${{secrets.SHEET_STORAGE_NAME_STG}}
+                  CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
+                  SHEET_SCRAPER_SCHEDULE: ${{secrets.SHEET_SCRAPER_SCHEDULE_STG}}
               run: |
                   echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
@@ -86,6 +124,8 @@ jobs:
                   echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
                   echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
+                  echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
+                  echo "sheet_scraper_schedule = \"$SHEET_SCRAPER_SCHEDULE\"" >> ./terraform.tfvars
 
             - name: "Apply"
               id: "apply"
@@ -140,6 +180,7 @@ jobs:
                   PROJECT_ID: ${{secrets.PROJECT_ID}}
                   REGION: ${{secrets.REGION}}
                   ENV: "stg"
+                  SHEET_SCRAPER_SCHEDULE: ${{secrets.SHEET_SCRAPER_SCHEDULE_STG}}
               run: |
                   echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
                   echo "region = \"$REGION\"" >> ./terraform.tfvars
@@ -148,33 +189,84 @@ jobs:
                   echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
                   echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
                   echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
-
+                  echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
+                  echo "sheet_scraper_schedule = \"$SHEET_SCRAPER_SCHEDULE\"" >> ./terraform.tfvars
             - name: "Plan"
               id: "plan"
               run: |
                   terraform init
                   terraform plan
 
+    sheet-scraper-test:
+        outputs:
+            is-success: ${{steps.test.outcome}} # 'success' or 'failure'
+        permissions:
+            id-token: write
+            contents: read
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./gcp/sheet-scraper
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "22"
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 10.10.0
+
+            - name: "Install dependencies"
+              run: |
+                  pnpm install
+
+            - name: "Create .env"
+              env:
+                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
+                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
+                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
+                  CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
+              run: |
+                  echo "SEGA_USER_NAME=\"$SEGA_USER_NAME\"" > .env
+                  echo "SEGA_PASSWORD=\"$SEGA_PASSWORD\"" >> .env
+                  echo "SPREAD_SHEET_ID=\"$SPREAD_SHEET_ID\"" >> .env
+                  echo "SHEET_STORAGE_NAME=\"\"" >> .env
+                  echo "CURRENT_ONGEKI_VERSION_NAME=\"$CURRENT_ONGEKI_VERSION_NAME\"" >> .env
+            - name: "Test"
+              id: "test"
+              run: |
+                  pnpm test
+
     add-comment-to-pr:
         runs-on: ubuntu-latest
         needs:
             - chrome-extension-build
+            - chrome-extension-test
             - gcp-apply-new
             - plan-stg
+            - sheet-scraper-test
         if: always()
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         steps:
-            # 3つのジョブの成否を出力する
+            # 全てのジョブの成否を出力する
             - name: "Judge If All Jobs Succeeded"
               id: "judge-if-all-jobs-succeeded"
               run: |
                   echo "chrome-extension-build: ${{needs.chrome-extension-build.outputs.is-success}}"
+                  echo "chrome-extension-test: ${{needs.chrome-extension-test.outputs.is-success}}"
                   echo "gcp-apply-new: ${{needs.gcp-apply-new.outputs.is-success}}"
                   echo "plan-stg: ${{needs.plan-stg.outputs.is-success}}"
+                  echo "sheet-scraper-test: ${{needs.sheet-scraper-test.outputs.is-success}}"
                   if [[ "${{needs.chrome-extension-build.outputs.is-success}}" == 'success' && \
+                        "${{needs.chrome-extension-test.outputs.is-success}}" == "success" && \
                         "${{needs.gcp-apply-new.outputs.is-success}}" == 'success' && \
-                        "${{needs.plan-stg.outputs.is-success}}" == 'success' ]]; then
+                        "${{needs.plan-stg.outputs.is-success}}" == 'success' && \
+                        "${{needs.sheet-scraper-test.outputs.is-success}}" == 'success' ]]; then
                       echo "ALL_JOBS_SUCCEEDED=true" >> $GITHUB_ENV
                   else
                       echo "ALL_JOBS_SUCCEEDED=false" >> $GITHUB_ENV

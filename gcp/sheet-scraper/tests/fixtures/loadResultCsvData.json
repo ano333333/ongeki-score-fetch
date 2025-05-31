@@ -1,0 +1,44 @@
+{
+    "title1": {
+        "title": "title1",
+        "genre": "genre1",
+        "character": "character1",
+        "versionMaster": "version1",
+        "versionLunatic": "version1",
+        "constants": {
+            "BASIC": 2.0,
+            "ADVANCED": 6.0,
+            "EXPERT": 10.0,
+            "MASTER": 13.0,
+            "LUNATIC": 14.0
+        }
+    },
+    "title2": {
+        "title": "title2",
+        "genre": "genre2",
+        "character": "character2",
+        "versionMaster": "version2",
+        "versionLunatic": null,
+        "constants": {
+            "BASIC": null,
+            "ADVANCED": null,
+            "EXPERT": null,
+            "MASTER": 13.0,
+            "LUNATIC": null
+        }
+    },
+    "title3": {
+        "title": "title3",
+        "genre": "genre3",
+        "character": "character3",
+        "versionMaster": null,
+        "versionLunatic": "version3",
+        "constants": {
+            "BASIC": null,
+            "ADVANCED": null,
+            "EXPERT": null,
+            "MASTER": null,
+            "LUNATIC": 14.0
+        }
+    }
+}

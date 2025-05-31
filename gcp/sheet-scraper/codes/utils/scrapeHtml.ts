@@ -1,7 +1,31 @@
-import type { Browser, Page } from "playwright";
+import type { Page, Browser } from "playwright";
 import { chromium } from "playwright";
 import { sleep } from "./sleep";
 import path from "node:path";
+
+const SCRAPE_INTERVAL = 3000;
+
+/**
+ * ページのHTMLを取得する。
+ * またページアクセスからこのPromise終了までがSCRAPE_INTERVALミリ秒になるようにsleepを挟む
+ * @param url
+ * @param authFilePath
+ * @returns 曲タイトルをkey、セクション名をvalueとするMap
+ */
+export async function scrapeHtml(url: string, authFilePath: string) {
+	const callback = async (page: Page) => {
+		console.log(`executeLogicWithHtml start: ${url}`);
+		const html = await page.content();
+		console.log(`executeLogicWithHtml end: ${url}`);
+		return html;
+	};
+	const promises = [
+		openOngekiMypageUrl(url, callback, authFilePath),
+		sleep(SCRAPE_INTERVAL),
+	];
+	const [html, _] = await Promise.all(promises);
+	return html as string;
+}
 
 /**
  * オンゲキマイページのURLを開いてからコールバックを実行し、ブラウザを閉じる
@@ -10,7 +34,7 @@ import path from "node:path";
  * @param authFilePath オンゲキマイページのcookieの保存先のパス
  * @returns
  */
-export function openOngekiMypageUrl<T>(
+function openOngekiMypageUrl<T>(
 	url: string,
 	callback: (page: Page) => Promise<T>,
 	authFilePath = "../auth.json",

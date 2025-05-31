@@ -4,3 +4,4 @@ dist
 auth.json
 credentials.json
 result.csv
+coverage

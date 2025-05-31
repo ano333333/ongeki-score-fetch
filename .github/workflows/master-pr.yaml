@@ -38,6 +38,42 @@ jobs:
                   npm install
                   npm run build
 
+    chrome-extension-test:
+        runs-on: ubuntu-latest
+        outputs:
+            is-success: ${{steps.test.outcome}} # 'success' or 'failure'
+        permissions:
+            id-token: write
+            contents: read
+        defaults:
+            run:
+                working-directory: ./chrome-extension
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v3
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+
+            - name: "Install dependencies"
+              run: |
+                  npm install
+
+            - name: "Install Playwright Browsers"
+              run: npx playwright install --with-deps
+
+            - name: "Add Env"
+              env:
+                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
+              run: |
+                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
+
+            - name: "Test"
+              id: "test"
+              run: |
+                  npm run test:ci
+
     gcp-apply-new:
         outputs:
             is-success: ${{steps.apply.outcome}} # 'success' or 'failure'
@@ -209,6 +245,7 @@ jobs:
         runs-on: ubuntu-latest
         needs:
             - chrome-extension-build
+            - chrome-extension-test
             - gcp-apply-new
             - plan-stg
             - sheet-scraper-test
@@ -216,15 +253,17 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         steps:
-            # 3つのジョブの成否を出力する
+            # 全てのジョブの成否を出力する
             - name: "Judge If All Jobs Succeeded"
               id: "judge-if-all-jobs-succeeded"
               run: |
                   echo "chrome-extension-build: ${{needs.chrome-extension-build.outputs.is-success}}"
+                  echo "chrome-extension-test: ${{needs.chrome-extension-test.outputs.is-success}}"
                   echo "gcp-apply-new: ${{needs.gcp-apply-new.outputs.is-success}}"
                   echo "plan-stg: ${{needs.plan-stg.outputs.is-success}}"
                   echo "sheet-scraper-test: ${{needs.sheet-scraper-test.outputs.is-success}}"
                   if [[ "${{needs.chrome-extension-build.outputs.is-success}}" == 'success' && \
+                        "${{needs.chrome-extension-test.outputs.is-success}}" == "success" && \
                         "${{needs.gcp-apply-new.outputs.is-success}}" == 'success' && \
                         "${{needs.plan-stg.outputs.is-success}}" == 'success' && \
                         "${{needs.sheet-scraper-test.outputs.is-success}}" == 'success' ]]; then

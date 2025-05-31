@@ -10,288 +10,316 @@ permissions:
     pull-requests: write
 
 jobs:
-    chrome-extension-build:
-        outputs:
-            is-success: ${{steps.install-dependencies-and-build.outcome}} # 'success' or 'failure'
+    updated-files-check:
         runs-on: ubuntu-latest
         defaults:
             run:
-                working-directory: ./chrome-extension
+                working-directory: ./.github/workflows
         steps:
-            - name: "Checkout"
-              uses: actions/checkout@v3
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
+            - uses: actions/checkout@v3
               with:
-                  node-version: "21"
+                  fetch-depth: 0
 
-            - name: "Add env"
-              env:
-                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
+            - name: git log
               run: |
-                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
+                  git show -q HEAD^1
+                  git show -q HEAD
+                  git diff --name-only HEAD^1 HEAD
 
-            - name: Install dependencies and build
-              id: install-dependencies-and-build
+            - name: "Check if updated files contain target"
               run: |
-                  npm install
-                  npm run build
+                  updated=$(git diff --name-only HEAD^1 HEAD)
+                  target="chrome-extension"
+                  echo "$updated" | ./contain-updated.sh <<< "$target"
 
-    chrome-extension-test:
-        runs-on: ubuntu-latest
-        outputs:
-            is-success: ${{steps.test.outcome}} # 'success' or 'failure'
-        permissions:
-            id-token: write
-            contents: read
-        defaults:
-            run:
-                working-directory: ./chrome-extension
-        steps:
-            - name: "Checkout"
-              uses: actions/checkout@v3
-
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-
-            - name: "Install dependencies"
+            - name: "Check if updated files contain target"
               run: |
-                  npm install
+                  updated=$(git diff --name-only HEAD^1 HEAD)
+                  target="gcp"
+                  echo "$updated" | ./contain-updated.sh <<< "$target"
 
-            - name: "Install Playwright Browsers"
-              run: npx playwright install --with-deps
+    # chrome-extension-build:
+    #     outputs:
+    #         is-success: ${{steps.install-dependencies-and-build.outcome}} # 'success' or 'failure'
+    #     runs-on: ubuntu-latest
+    #     defaults:
+    #         run:
+    #             working-directory: ./chrome-extension
+    #     steps:
+    #         - name: "Checkout"
+    #           uses: actions/checkout@v3
 
-            - name: "Add Env"
-              env:
-                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
-              run: |
-                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
+    #         - name: Setup Node.js
+    #           uses: actions/setup-node@v3
+    #           with:
+    #               node-version: "21"
 
-            - name: "Test"
-              id: "test"
-              run: |
-                  npm run test:ci
+    #         - name: "Add env"
+    #           env:
+    #               VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
+    #           run: |
+    #               echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
 
-    gcp-apply-new:
-        outputs:
-            is-success: ${{steps.apply.outcome}} # 'success' or 'failure'
-        permissions:
-            id-token: write
-            contents: read
-        runs-on: ubuntu-latest
-        defaults:
-            run:
-                working-directory: ./gcp
-        steps:
-            - name: "Checkout"
-              uses: actions/checkout@v3
+    #         - name: Install dependencies and build
+    #           id: install-dependencies-and-build
+    #           run: |
+    #               npm install
+    #               npm run build
 
-            - uses: hashicorp/setup-terraform@v3
+    # chrome-extension-test:
+    #     runs-on: ubuntu-latest
+    #     outputs:
+    #         is-success: ${{steps.test.outcome}} # 'success' or 'failure'
+    #     permissions:
+    #         id-token: write
+    #         contents: read
+    #     defaults:
+    #         run:
+    #             working-directory: ./chrome-extension
+    #     steps:
+    #         - name: "Checkout"
+    #           uses: actions/checkout@v3
 
-            - id: "gcp-auth"
-              name: "Authenticate to GCP"
-              uses: "google-GitHub-actions/auth@v1"
-              with:
-                  create_credentials_file: true
-                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
-                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
+    #         - uses: actions/setup-node@v4
+    #           with:
+    #               node-version: 22
 
-            - name: "Activate GCP Service Account"
-              run: |
-                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+    #         - name: "Install dependencies"
+    #           run: |
+    #               npm install
 
-            - name: "Configure Docker to use GCP Artifact Registry"
-              run: |
-                  gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
+    #         - name: "Install Playwright Browsers"
+    #           run: npx playwright install --with-deps
 
-            - name: "Copy variables.tf"
-              env:
-                  PROJECT_ID: ${{secrets.PROJECT_ID}}
-                  REGION: ${{secrets.REGION}}
-                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
-                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
-                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
-                  SHEET_STORAGE_NAME_STG: ${{secrets.SHEET_STORAGE_NAME_STG}}
-                  CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
-                  SHEET_SCRAPER_SCHEDULE: ${{secrets.SHEET_SCRAPER_SCHEDULE_STG}}
-              run: |
-                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
-                  echo "region = \"$REGION\"" >> ./terraform.tfvars
-                  echo "env = \"\"" >> ./terraform.tfvars
-                  echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
-                  echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
-                  echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
-                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
-                  echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
-                  echo "sheet_scraper_schedule = \"$SHEET_SCRAPER_SCHEDULE\"" >> ./terraform.tfvars
+    #         - name: "Add Env"
+    #           env:
+    #               VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
+    #           run: |
+    #               echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
 
-            - name: "Apply"
-              id: "apply"
-              run: |
-                  terraform init
-                  terraform validate
-                  terraform apply -auto-approve
+    #         - name: "Test"
+    #           id: "test"
+    #           run: |
+    #               npm run test:ci
 
-            - name: "Destroy"
-              if: always()
-              run: |
-                  terraform destroy -auto-approve
+    # gcp-apply-new:
+    #     outputs:
+    #         is-success: ${{steps.apply.outcome}} # 'success' or 'failure'
+    #     permissions:
+    #         id-token: write
+    #         contents: read
+    #     runs-on: ubuntu-latest
+    #     defaults:
+    #         run:
+    #             working-directory: ./gcp
+    #     steps:
+    #         - name: "Checkout"
+    #           uses: actions/checkout@v3
 
-    plan-stg:
-        outputs:
-            is-success: ${{steps.plan.outcome}} # 'success' or 'failure'
-        permissions:
-            id-token: write
-            contents: read
-        runs-on: ubuntu-latest
-        defaults:
-            run:
-                working-directory: ./gcp
-        steps:
-            - name: "Checkout"
-              uses: actions/checkout@v3
+    #         - uses: hashicorp/setup-terraform@v3
 
-            - uses: hashicorp/setup-terraform@v3
+    #         - id: "gcp-auth"
+    #           name: "Authenticate to GCP"
+    #           uses: "google-GitHub-actions/auth@v1"
+    #           with:
+    #               create_credentials_file: true
+    #               workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
+    #               service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
 
-            - id: "gcp-auth"
-              name: "Authenticate to GCP"
-              uses: "google-GitHub-actions/auth@v1"
-              with:
-                  create_credentials_file: true
-                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
-                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
+    #         - name: "Activate GCP Service Account"
+    #           run: |
+    #               gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
 
-            - name: "Activate GCP Service Account"
-              run: |
-                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+    #         - name: "Configure Docker to use GCP Artifact Registry"
+    #           run: |
+    #               gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
 
-            - name: "Configure Docker to use GCP Artifact Registry"
-              run: |
-                  gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
+    #         - name: "Copy variables.tf"
+    #           env:
+    #               PROJECT_ID: ${{secrets.PROJECT_ID}}
+    #               REGION: ${{secrets.REGION}}
+    #               SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
+    #               SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
+    #               SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
+    #               SHEET_STORAGE_NAME_STG: ${{secrets.SHEET_STORAGE_NAME_STG}}
+    #               CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
+    #               SHEET_SCRAPER_SCHEDULE: ${{secrets.SHEET_SCRAPER_SCHEDULE_STG}}
+    #           run: |
+    #               echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
+    #               echo "region = \"$REGION\"" >> ./terraform.tfvars
+    #               echo "env = \"\"" >> ./terraform.tfvars
+    #               echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
+    #               echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
+    #               echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
+    #               echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
+    #               echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
+    #               echo "sheet_scraper_schedule = \"$SHEET_SCRAPER_SCHEDULE\"" >> ./terraform.tfvars
 
-            - name: "Download stg.tfstate"
-              run: |
-                  gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate ./terraform.tfstate
+    #         - name: "Apply"
+    #           id: "apply"
+    #           run: |
+    #               terraform init
+    #               terraform validate
+    #               terraform apply -auto-approve
 
-            - name: "Copy variables.tf"
-              env:
-                  PROJECT_ID: ${{secrets.PROJECT_ID}}
-                  REGION: ${{secrets.REGION}}
-                  ENV: "stg"
-                  SHEET_SCRAPER_SCHEDULE: ${{secrets.SHEET_SCRAPER_SCHEDULE_STG}}
-              run: |
-                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
-                  echo "region = \"$REGION\"" >> ./terraform.tfvars
-                  echo "env = \"$ENV\"" >> ./terraform.tfvars
-                  echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
-                  echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
-                  echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
-                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
-                  echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
-                  echo "sheet_scraper_schedule = \"$SHEET_SCRAPER_SCHEDULE\"" >> ./terraform.tfvars
-            - name: "Plan"
-              id: "plan"
-              run: |
-                  terraform init
-                  terraform plan
+    #         - name: "Destroy"
+    #           if: always()
+    #           run: |
+    #               terraform destroy -auto-approve
 
-    sheet-scraper-test:
-        outputs:
-            is-success: ${{steps.test.outcome}} # 'success' or 'failure'
-        permissions:
-            id-token: write
-            contents: read
-        runs-on: ubuntu-latest
-        defaults:
-            run:
-                working-directory: ./gcp/sheet-scraper
-        steps:
-            - name: "Checkout"
-              uses: actions/checkout@v3
+    # plan-stg:
+    #     outputs:
+    #         is-success: ${{steps.plan.outcome}} # 'success' or 'failure'
+    #     permissions:
+    #         id-token: write
+    #         contents: read
+    #     runs-on: ubuntu-latest
+    #     defaults:
+    #         run:
+    #             working-directory: ./gcp
+    #     steps:
+    #         - name: "Checkout"
+    #           uses: actions/checkout@v3
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "22"
+    #         - uses: hashicorp/setup-terraform@v3
 
-            - uses: pnpm/action-setup@v4
-              with:
-                  version: 10.10.0
+    #         - id: "gcp-auth"
+    #           name: "Authenticate to GCP"
+    #           uses: "google-GitHub-actions/auth@v1"
+    #           with:
+    #               create_credentials_file: true
+    #               workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
+    #               service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
 
-            - name: "Install dependencies"
-              run: |
-                  pnpm install
+    #         - name: "Activate GCP Service Account"
+    #           run: |
+    #               gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
 
-            - name: "Create .env"
-              env:
-                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
-                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
-                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
-                  CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
-              run: |
-                  echo "SEGA_USER_NAME=\"$SEGA_USER_NAME\"" > .env
-                  echo "SEGA_PASSWORD=\"$SEGA_PASSWORD\"" >> .env
-                  echo "SPREAD_SHEET_ID=\"$SPREAD_SHEET_ID\"" >> .env
-                  echo "SHEET_STORAGE_NAME=\"\"" >> .env
-                  echo "CURRENT_ONGEKI_VERSION_NAME=\"$CURRENT_ONGEKI_VERSION_NAME\"" >> .env
-            - name: "Test"
-              id: "test"
-              run: |
-                  pnpm test
+    #         - name: "Configure Docker to use GCP Artifact Registry"
+    #           run: |
+    #               gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
 
-    add-comment-to-pr:
-        runs-on: ubuntu-latest
-        needs:
-            - chrome-extension-build
-            - chrome-extension-test
-            - gcp-apply-new
-            - plan-stg
-            - sheet-scraper-test
-        if: always()
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        steps:
-            # 全てのジョブの成否を出力する
-            - name: "Judge If All Jobs Succeeded"
-              id: "judge-if-all-jobs-succeeded"
-              run: |
-                  echo "chrome-extension-build: ${{needs.chrome-extension-build.outputs.is-success}}"
-                  echo "chrome-extension-test: ${{needs.chrome-extension-test.outputs.is-success}}"
-                  echo "gcp-apply-new: ${{needs.gcp-apply-new.outputs.is-success}}"
-                  echo "plan-stg: ${{needs.plan-stg.outputs.is-success}}"
-                  echo "sheet-scraper-test: ${{needs.sheet-scraper-test.outputs.is-success}}"
-                  if [[ "${{needs.chrome-extension-build.outputs.is-success}}" == 'success' && \
-                        "${{needs.chrome-extension-test.outputs.is-success}}" == "success" && \
-                        "${{needs.gcp-apply-new.outputs.is-success}}" == 'success' && \
-                        "${{needs.plan-stg.outputs.is-success}}" == 'success' && \
-                        "${{needs.sheet-scraper-test.outputs.is-success}}" == 'success' ]]; then
-                      echo "ALL_JOBS_SUCCEEDED=true" >> $GITHUB_ENV
-                  else
-                      echo "ALL_JOBS_SUCCEEDED=false" >> $GITHUB_ENV
-                  fi
+    #         - name: "Download stg.tfstate"
+    #           run: |
+    #               gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/stg.tfstate ./terraform.tfstate
 
-            - name: "Create Comment Body File For Success"
-              if: ${{env.ALL_JOBS_SUCCEEDED == 'true'}}
-              run: |
-                  echo "ALL_JOBS_SUCCEEDED: ${{env.ALL_JOBS_SUCCEEDED}}"
-                  cat << EOF > pr_comment.md
-                  ## PR Test Pipeline Success
-                  Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
-                  EOF
+    #         - name: "Copy variables.tf"
+    #           env:
+    #               PROJECT_ID: ${{secrets.PROJECT_ID}}
+    #               REGION: ${{secrets.REGION}}
+    #               ENV: "stg"
+    #               SHEET_SCRAPER_SCHEDULE: ${{secrets.SHEET_SCRAPER_SCHEDULE_STG}}
+    #           run: |
+    #               echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
+    #               echo "region = \"$REGION\"" >> ./terraform.tfvars
+    #               echo "env = \"$ENV\"" >> ./terraform.tfvars
+    #               echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
+    #               echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
+    #               echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
+    #               echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_STG\"" >> ./terraform.tfvars
+    #               echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
+    #               echo "sheet_scraper_schedule = \"$SHEET_SCRAPER_SCHEDULE\"" >> ./terraform.tfvars
+    #         - name: "Plan"
+    #           id: "plan"
+    #           run: |
+    #               terraform init
+    #               terraform plan
 
-            - name: "Create Comment Body File For Failure"
-              if: ${{env.ALL_JOBS_SUCCEEDED == 'false'}}
-              run: |
-                  echo "ALL_JOBS_SUCCEEDED: ${{env.ALL_JOBS_SUCCEEDED}}"
-                  cat << EOF > pr_comment.md
-                  ## PR Test Pipeline Failed
-                  Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
-                  EOF
+    # sheet-scraper-test:
+    #     outputs:
+    #         is-success: ${{steps.test.outcome}} # 'success' or 'failure'
+    #     permissions:
+    #         id-token: write
+    #         contents: read
+    #     runs-on: ubuntu-latest
+    #     defaults:
+    #         run:
+    #             working-directory: ./gcp/sheet-scraper
+    #     steps:
+    #         - name: "Checkout"
+    #           uses: actions/checkout@v3
 
-            - name: "Add Comment To PR"
-              if: always()
-              run: |
-                  cat pr_comment.md
-                  gh pr comment --body-file pr_comment.md "${{github.event.pull_request.html_url}}"
+    #         - name: Setup Node.js
+    #           uses: actions/setup-node@v3
+    #           with:
+    #               node-version: "22"
+
+    #         - uses: pnpm/action-setup@v4
+    #           with:
+    #               version: 10.10.0
+
+    #         - name: "Install dependencies"
+    #           run: |
+    #               pnpm install
+
+    #         - name: "Create .env"
+    #           env:
+    #               SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
+    #               SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
+    #               SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
+    #               CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
+    #           run: |
+    #               echo "SEGA_USER_NAME=\"$SEGA_USER_NAME\"" > .env
+    #               echo "SEGA_PASSWORD=\"$SEGA_PASSWORD\"" >> .env
+    #               echo "SPREAD_SHEET_ID=\"$SPREAD_SHEET_ID\"" >> .env
+    #               echo "SHEET_STORAGE_NAME=\"\"" >> .env
+    #               echo "CURRENT_ONGEKI_VERSION_NAME=\"$CURRENT_ONGEKI_VERSION_NAME\"" >> .env
+    #         - name: "Test"
+    #           id: "test"
+    #           run: |
+    #               pnpm test
+
+    # add-comment-to-pr:
+    #     runs-on: ubuntu-latest
+    #     needs:
+    #         - chrome-extension-build
+    #         - chrome-extension-test
+    #         - gcp-apply-new
+    #         - plan-stg
+    #         - sheet-scraper-test
+    #     if: always()
+    #     env:
+    #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #     steps:
+    #         # 全てのジョブの成否を出力する
+    #         - name: "Judge If All Jobs Succeeded"
+    #           id: "judge-if-all-jobs-succeeded"
+    #           run: |
+    #               echo "chrome-extension-build: ${{needs.chrome-extension-build.outputs.is-success}}"
+    #               echo "chrome-extension-test: ${{needs.chrome-extension-test.outputs.is-success}}"
+    #               echo "gcp-apply-new: ${{needs.gcp-apply-new.outputs.is-success}}"
+    #               echo "plan-stg: ${{needs.plan-stg.outputs.is-success}}"
+    #               echo "sheet-scraper-test: ${{needs.sheet-scraper-test.outputs.is-success}}"
+    #               if [[ "${{needs.chrome-extension-build.outputs.is-success}}" == 'success' && \
+    #                     "${{needs.chrome-extension-test.outputs.is-success}}" == "success" && \
+    #                     "${{needs.gcp-apply-new.outputs.is-success}}" == 'success' && \
+    #                     "${{needs.plan-stg.outputs.is-success}}" == 'success' && \
+    #                     "${{needs.sheet-scraper-test.outputs.is-success}}" == 'success' ]]; then
+    #                   echo "ALL_JOBS_SUCCEEDED=true" >> $GITHUB_ENV
+    #               else
+    #                   echo "ALL_JOBS_SUCCEEDED=false" >> $GITHUB_ENV
+    #               fi
+
+    #         - name: "Create Comment Body File For Success"
+    #           if: ${{env.ALL_JOBS_SUCCEEDED == 'true'}}
+    #           run: |
+    #               echo "ALL_JOBS_SUCCEEDED: ${{env.ALL_JOBS_SUCCEEDED}}"
+    #               cat << EOF > pr_comment.md
+    #               ## PR Test Pipeline Success
+    #               Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+    #               EOF
+
+    #         - name: "Create Comment Body File For Failure"
+    #           if: ${{env.ALL_JOBS_SUCCEEDED == 'false'}}
+    #           run: |
+    #               echo "ALL_JOBS_SUCCEEDED: ${{env.ALL_JOBS_SUCCEEDED}}"
+    #               cat << EOF > pr_comment.md
+    #               ## PR Test Pipeline Failed
+    #               Github Actions Log: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+    #               EOF
+
+    #         - name: "Add Comment To PR"
+    #           if: always()
+    #           run: |
+    #               cat pr_comment.md
+    #               gh pr comment --body-file pr_comment.md "${{github.event.pull_request.html_url}}"

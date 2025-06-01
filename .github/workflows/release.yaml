@@ -6,7 +6,33 @@ on:
             - "release"
 
 jobs:
+    updated-files-check:
+        outputs:
+            chrome-extension-updated: ${{steps.check-chrome-extension.outputs.updated}}
+            gcp-updated: ${{steps.check-gcp.outputs.updated}}
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./.github/workflows
+        steps:
+            - uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
+
+            - name: "Check if chrome-extension dir contains updated files"
+              id: check-chrome-extension
+              run: |
+                  echo "updated=$(./containing-updated-files.sh --target chrome-extension)" >> $GITHUB_OUTPUT
+
+            - name: "Check if gcp dir contains updated files"
+              id: check-gcp
+              run: |
+                  echo "updated=$(./containing-updated-files.sh --target gcp)" >> $GITHUB_OUTPUT
+
     build-and-release:
+        needs:
+            - updated-files-check
+        if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true'}}
         runs-on: ubuntu-latest
         defaults:
             run:
@@ -58,6 +84,9 @@ jobs:
                   asset_content_type: application/zip
 
     apply-terraform:
+        needs:
+            - updated-files-check
+        if: ${{needs.updated-files-check.outputs.gcp-updated == 'true'}}
         permissions:
             id-token: write
             contents: read

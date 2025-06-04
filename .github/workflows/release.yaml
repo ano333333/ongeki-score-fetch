@@ -49,56 +49,27 @@ jobs:
             - name: "Checkout"
               uses: actions/checkout@v3
 
-            - uses: hashicorp/setup-terraform@v3
-
-            - id: "gcp-auth"
-              name: "Authenticate to GCP"
-              uses: "google-GitHub-actions/auth@v1"
+            - name: Setup GCP Auth
+              uses: ./.github/workflows/setup-gcp-auth
               with:
-                  create_credentials_file: true
-                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
-                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
-
-            - name: "Activate GCP Service Account"
-              run: |
-                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
-
-            - name: "Configure Docker to use GCP Artifact Registry"
-              run: |
-                  gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
-
-            - name: "Download prd.tfstate"
-              run: |
-                  gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/prd.tfstate ./terraform.tfstate
+                  workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+                  service-account-email: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+                  region: ${{ secrets.REGION }}
 
             - name: "Copy variables.tf"
-              env:
-                  PROJECT_ID: ${{secrets.PROJECT_ID}}
-                  REGION: ${{secrets.REGION}}
-                  ENV: "prd"
-                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
-                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
-                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
-                  SHEET_STORAGE_NAME_PRD: ${{secrets.SHEET_STORAGE_NAME_PRD}}
-                  CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
-                  SHEET_SCRAPER_SCHEDULE: ${{secrets.SHEET_SCRAPER_SCHEDULE_PRD}}
               run: |
-                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
-                  echo "region = \"$REGION\"" >> ./terraform.tfvars
-                  echo "env = \"$ENV\"" >> ./terraform.tfvars
-                  echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
-                  echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
-                  echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
-                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_PRD\"" >> ./terraform.tfvars
-                  echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
-                  echo "sheet_scraper_schedule = \"$SHEET_SCRAPER_SCHEDULE\"" >> ./terraform.tfvars
-            - name: "Apply"
-              run: |
-                  terraform init
-                  terraform validate
-                  terraform apply -auto-approve
+                  echo "project_id=\"${{ secrets.PROJECT_ID }}\"" > ./terraform.tfvars
+                  echo "region=\"${{ secrets.REGION }}\"" >> ./terraform.tfvars
+                  echo "env=\"prd\"" >> ./terraform.tfvars
+                  echo "sega_user_name=\"${{ secrets.SEGA_USER_NAME }}\"" >> ./terraform.tfvars
+                  echo "sega_password=\"${{ secrets.SEGA_PASSWORD }}\"" >> ./terraform.tfvars
+                  echo "spread_sheet_id=\"${{ secrets.SPREAD_SHEET_ID }}\"" >> ./terraform.tfvars
+                  echo "sheet_storage_name=\"${{ secrets.SHEET_STORAGE_NAME_PRD }}\"" >> ./terraform.tfvars
+                  echo "current_ongeki_version_name=\"${{ secrets.CURRENT_ONGEKI_VERSION_NAME }}\"" >> ./terraform.tfvars
+                  echo "sheet_scraper_schedule=\"${{ secrets.SHEET_SCRAPER_SCHEDULE_PRD }}\"" >> ./terraform.tfvars
 
-            - name: "Upload prd.tfstate"
-              if: always()
-              run: |
-                  gsutil cp terraform.tfstate gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/prd.tfstate
+            - name: Apply Terraform
+              uses: ./.github/workflows/apply-terraform
+              with:
+                  terraform-tfstate-bucket: ${{ secrets.TERRAFORM_TFSTATE_BUCKET }}
+                  env: prd

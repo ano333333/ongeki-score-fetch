@@ -134,21 +134,15 @@ jobs:
                   pnpm install
 
             - name: "Create .env"
-              env:
-                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
-                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
-                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
-                  CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
               run: |
-                  echo "SEGA_USER_NAME=\"$SEGA_USER_NAME\"" > .env
-                  echo "SEGA_PASSWORD=\"$SEGA_PASSWORD\"" >> .env
-                  echo "SPREAD_SHEET_ID=\"$SPREAD_SHEET_ID\"" >> .env
-                  echo "SHEET_STORAGE_NAME=\"\"" >> .env
-                  echo "CURRENT_ONGEKI_VERSION_NAME=\"$CURRENT_ONGEKI_VERSION_NAME\"" >> .env
-            - name: "Test"
-              id: "test"
-              run: |
-                  pnpm test
+                  echo "SEGA_USER_NAME=\"${{secrets.SEGA_USER_NAME}}\"" > .env
+                  echo "SEGA_PASSWORD=\"${{secrets.SEGA_PASSWORD}}\"" >> .env
+                  echo "SPREAD_SHEET_ID=\"${{secrets.SPREAD_SHEET_ID}}\"" >> .env
+                  echo "SHEET_STORAGE_NAME=\"${{secrets.SHEET_STORAGE_NAME_STG}}\"" >> .env
+                  echo "CURRENT_ONGEKI_VERSION_NAME=\"${{secrets.CURRENT_ONGEKI_VERSION_NAME}}\"" >> .env
+
+            - uses: ./.github/workflows/test-sheet-scraper/
+              id: test
 
     add-comment-to-pr:
         runs-on: ubuntu-latest

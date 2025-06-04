@@ -116,19 +116,6 @@ jobs:
             - name: "Checkout"
               uses: actions/checkout@v3
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "22"
-
-            - uses: pnpm/action-setup@v4
-              with:
-                  version: 10.10.0
-
-            - name: "Install dependencies"
-              run: |
-                  pnpm install
-
             - name: "Create .env"
               run: |
                   echo "SEGA_USER_NAME=\"${{secrets.SEGA_USER_NAME}}\"" > .env

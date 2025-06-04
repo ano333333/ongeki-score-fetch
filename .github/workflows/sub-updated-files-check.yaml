@@ -1,0 +1,39 @@
+# ######################################################################
+#
+# chrome-extension, gcpディレクトリに更新ファイルが含まれるか確認する
+#
+# ######################################################################
+on:
+    workflow_call:
+        outputs:
+            chrome-extension-updated:
+                description: chrome-extensionディレクトリに更新ファイルが含まれるか("true" or "false")
+                value: ${{jobs.check.outputs.chrome-extension-updated}}
+            gcp-updated:
+                description: gcpディレクトリに更新ファイルが含まれるか("true" or "false")
+                value: ${{jobs.check.outputs.gcp-updated}}
+
+jobs:
+    check:
+        outputs:
+            chrome-extension-updated: ${{steps.check-chrome-extension.outputs.chrome-extension-updated}}
+            gcp-updated: ${{steps.check-gcp.outputs.gcp-updated}}
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./.github/workflows
+        steps:
+            - uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
+
+            - name: Check if chrome-extension dir contains updated files
+              id: check-chrome-extension
+              run: |
+                  echo `git diff --name-only HEAD^1 HEAD`
+                  echo "chrome-extension-updated=$(./containing-updated-files.sh --target chrome-extension)" >> $GITHUB_OUTPUT
+
+            - name: Check if gcp dir contains updated files
+              id: check-gcp
+              run: |
+                  echo "gcp-updated=$(./containing-updated-files.sh --target gcp)" >> $GITHUB_OUTPUT

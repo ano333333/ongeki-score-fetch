@@ -15,7 +15,7 @@ jobs:
 
     chrome-extension-build:
         outputs:
-            is-success: ${{steps.install-dependencies-and-build.outcome}} # 'success' or 'failure'
+            is-success: ${{steps.build.outputs.is-success}}
         needs:
             - updated-files-check
         if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true'}}
@@ -23,26 +23,22 @@ jobs:
         defaults:
             run:
                 working-directory: ./chrome-extension
+        permissions:
+            id-token: write
+            contents: read
         steps:
-            - name: "Checkout"
-              uses: actions/checkout@v3
+            - uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "21"
-
-            - name: "Add env"
-              env:
-                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
+            - name: create .env
               run: |
-                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
+                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG }}\"" > .env
 
-            - name: Install dependencies and build
-              id: install-dependencies-and-build
+            - name: check .env
               run: |
-                  npm install
-                  npm run build
+                  cat .env
+
+            - uses: ./.github/workflows/build-chromeex/
+              id: build
 
     chrome-extension-test:
         runs-on: ubuntu-latest

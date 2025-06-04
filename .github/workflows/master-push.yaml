@@ -24,17 +24,11 @@ jobs:
             - name: "Checkout"
               uses: actions/checkout@v3
 
-            - id: "gcp-auth"
-              name: "Authenticate to GCP"
-              uses: "google-GitHub-actions/auth@v1"
+            - uses: ./.github/workflows/setup-gcp-auth/
               with:
-                  create_credentials_file: true
-                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
-                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
-
-            - name: "Activate GCP Service Account"
-              run: |
-                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+                  workload-identity-provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
+                  service-account-email: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
+                  region: ${{secrets.REGION}}
 
             - name: Setup Node.js
               uses: actions/setup-node@v3

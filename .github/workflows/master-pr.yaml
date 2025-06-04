@@ -37,43 +37,27 @@ jobs:
               id: build
 
     chrome-extension-test:
-        runs-on: ubuntu-latest
         outputs:
-            is-success: ${{steps.test.outcome}} # 'success' or 'failure'
+            is-success: ${{steps.test.outputs.is-success}} # 'success' or 'failure'
         needs:
             - updated-files-check
         if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true'}}
         permissions:
             id-token: write
             contents: read
+        runs-on: ubuntu-latest
         defaults:
             run:
                 working-directory: ./chrome-extension
         steps:
-            - name: "Checkout"
-              uses: actions/checkout@v3
+            - uses: actions/checkout@v4
 
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-
-            - name: "Install dependencies"
+            - name: create .env
               run: |
-                  npm install
+                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG }}\"" > .env
 
-            - name: "Install Playwright Browsers"
-              run: npx playwright install --with-deps
-
-            - name: "Add Env"
-              env:
-                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
-              run: |
-                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
-
-            - name: "Test"
-              id: "test"
-              run: |
-                  npm run test:ci
+            - uses: ./.github/workflows/test-chromeex/
+              id: test
 
     plan-stg:
         outputs:

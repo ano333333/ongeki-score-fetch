@@ -1,0 +1,61 @@
+# ######################################################################
+#
+# Terraformのapplyを実行するComposite Action
+# tfstateファイルのダウンロードとterraform applyの実行、tfstateのアップロードを行う
+#
+# 前提条件:
+#   - variables.tfファイルが作成されていること
+# ```
+# runs-on: ubuntu-latest
+# defaults:
+#   run:
+#     working-directory: ./gcp
+# permissions:
+#   id-token: write
+#   contents: read
+# ```
+# 入力:
+#   - terraform-tfstate-bucket
+#   - env
+#
+# ######################################################################
+name: TerraformApply
+description: tfstateファイルのダウンロードとterraform applyの実行、tfstateのアップロードを行う
+
+inputs:
+    terraform-tfstate-bucket:
+        description: Terraform tfstate bucket name
+        required: true
+    env:
+        description: Environment (stg/prd)
+        required: true
+
+outputs:
+    is-success:
+        description: applyが成功したか("success" or "failure")
+        value: ${{steps.apply.outcome}}
+
+runs:
+    using: "composite"
+    steps:
+        - name: "Download tfstate"
+          working-directory: ./gcp
+          shell: bash
+          run: |
+              gsutil cp gs://${{inputs.terraform-tfstate-bucket}}/${{inputs.env}}.tfstate ./terraform.tfstate
+
+        - name: "Apply"
+          id: "apply"
+          working-directory: ./gcp
+          shell: bash
+          run: |
+              terraform init
+              terraform validate
+              terraform apply -auto-approve
+
+        - name: "Upload tfstate"
+          working-directory: ./gcp
+          shell: bash
+          if: always()
+          run: |
+              gsutil cp terraform.tfstate gs://${{inputs.terraform-tfstate-bucket}}/${{inputs.env}}.tfstate

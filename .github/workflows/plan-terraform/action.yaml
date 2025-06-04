@@ -1,0 +1,45 @@
+# ######################################################################
+#
+# Terraformのplanを実行するComposite Action
+# tfstateファイルのダウンロードとterraform planの実行を行う
+#
+# 前提条件:
+# ```
+# runs-on: ubuntu-latest
+# defaults:
+#   run:
+#     working-directory: ./gcp
+# ```
+# 入力:
+#   - TERRAFORM_TFSTATE_BUCKET
+#
+# ######################################################################
+name: TerraformPlan
+description: tfstateファイルのダウンロードとterraform planの実行を行う
+
+inputs:
+    terraform-tfstate-bucket:
+        description: Terraform tfstate bucket name
+        required: true
+
+outputs:
+    is-success:
+        description: planが成功したか("success" or "failure")
+        value: ${{steps.plan.outcome}}
+
+runs:
+    using: "composite"
+    steps:
+        - name: "Download stg.tfstate"
+          working-directory: ./gcp
+          shell: bash
+          run: |
+              gsutil cp gs://${{inputs.terraform-tfstate-bucket}}/stg.tfstate ./terraform.tfstate
+
+        - name: "Plan"
+          id: "plan"
+          working-directory: ./gcp
+          shell: bash
+          run: |
+              terraform init
+              terraform plan

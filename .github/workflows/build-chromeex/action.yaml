@@ -1,0 +1,47 @@
+# ######################################################################
+#
+# chrome-extensionのビルドを行い、distフォルダに保存する
+#
+# 前提条件:
+#   - ビルドに必要な.envファイルが作成されていること
+# ```
+# runs-on: ubuntu-latest
+# permissions:
+#   id-token: write
+#   contents: read
+# ```
+#
+# ######################################################################
+name: BuildChromeExtension
+description: chrome-extensionのビルドを行い、distフォルダに保存する
+outputs:
+    is-success:
+        description: ビルドが成功したか("success" or "failure")
+        value: ${{ steps.set-result.outputs.result }}
+runs:
+    using: composite
+    steps:
+        - name: Install dependencies
+          working-directory: ./chrome-extension
+          shell: bash
+          run: |
+              npm install
+
+        - name: Build
+          id: build
+          working-directory: ./chrome-extension
+          shell: bash
+          continue-on-error: true
+          run: |
+              npm run build
+
+        - name: Set result
+          id: set-result
+          shell: bash
+          run: |
+              if [ "${{ steps.build.outcome }}" == "success" ]; then
+                  echo "result=success" >> $GITHUB_OUTPUT
+              else
+                  echo "result=failure" >> $GITHUB_OUTPUT
+                  exit 1
+              fi

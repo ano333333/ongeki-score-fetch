@@ -30,21 +30,11 @@ jobs:
                   service-account-email: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
                   region: ${{secrets.REGION}}
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "21"
-
             - name: "Add env"
-              env:
-                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG}}
               run: |
-                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
+                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG }}\"" >> .env
 
-            - name: Install dependencies and build
-              run: |
-                  npm install
-                  npm run build
+            - uses: ./.github/workflows/build-chromeex/
 
             - name: Zip dist directory
               run: |

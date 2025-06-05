@@ -6,58 +6,38 @@ on:
             - "release"
 
 jobs:
+    updated-files-check:
+        uses: ./.github/workflows/sub-updated-files-check.yaml
     build-and-release:
+        needs:
+            - updated-files-check
+        if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true'}}
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
         defaults:
             run:
                 working-directory: ./chrome-extension
         steps:
-            - uses: actions/checkout@v3
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "21"
+            - name: "Checkout"
+              uses: actions/checkout@v3
 
             - name: "Add env"
-              env:
-                  VITE_BEATMAP_DATA_SOURCE_URL: ${{secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_PRD}}
               run: |
-                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"$VITE_BEATMAP_DATA_SOURCE_URL\"" >> .env
+                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_PRD }}\"" >> .env
 
-            - name: Install dependencies and build
-              run: |
-                  npm install
-                  npm run build
+            - name: Build Chrome Extension
+              uses: ./.github/workflows/build-chromeex
 
-            - name: Zip dist directory
-              run: |
-                  cd dist
-                  zip -r ../dist.zip .
-
-            - name: Create Release
-              id: create_release
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Create and Upload Release
+              uses: ./.github/workflows/create-and-upload-release
               with:
-                  tag_name: release-${{ github.run_id }}
-                  release_name: "Release: ${{ github.event.head_commit.timestamp }}"
-                  body: ${{ github.event.head_commit.message }}
-                  draft: false
-                  prerelease: false
-
-            - name: Upload Release Asset
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: ./chrome-extension/dist.zip
-                  asset_name: ongeki-score-fetch-${{ github.run_id }}.zip
-                  asset_content_type: application/zip
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
 
     apply-terraform:
+        needs:
+            - updated-files-check
+        if: ${{needs.updated-files-check.outputs.gcp-updated == 'true'}}
         permissions:
             id-token: write
             contents: read
@@ -69,56 +49,27 @@ jobs:
             - name: "Checkout"
               uses: actions/checkout@v3
 
-            - uses: hashicorp/setup-terraform@v3
-
-            - id: "gcp-auth"
-              name: "Authenticate to GCP"
-              uses: "google-GitHub-actions/auth@v1"
+            - name: Setup GCP Auth
+              uses: ./.github/workflows/setup-gcp-auth
               with:
-                  create_credentials_file: true
-                  workload_identity_provider: ${{secrets.WORKLOAD_IDENTITY_PROVIDER}}
-                  service_account: ${{secrets.SERVICE_ACCOUNT_EMAIL}}
-
-            - name: "Activate GCP Service Account"
-              run: |
-                  gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
-
-            - name: "Configure Docker to use GCP Artifact Registry"
-              run: |
-                  gcloud auth configure-docker ${{secrets.REGION}}-docker.pkg.dev
-
-            - name: "Download prd.tfstate"
-              run: |
-                  gsutil cp gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/prd.tfstate ./terraform.tfstate
+                  workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+                  service-account-email: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+                  region: ${{ secrets.REGION }}
 
             - name: "Copy variables.tf"
-              env:
-                  PROJECT_ID: ${{secrets.PROJECT_ID}}
-                  REGION: ${{secrets.REGION}}
-                  ENV: "prd"
-                  SEGA_USER_NAME: ${{secrets.SEGA_USER_NAME}}
-                  SEGA_PASSWORD: ${{secrets.SEGA_PASSWORD}}
-                  SPREAD_SHEET_ID: ${{secrets.SPREAD_SHEET_ID}}
-                  SHEET_STORAGE_NAME_PRD: ${{secrets.SHEET_STORAGE_NAME_PRD}}
-                  CURRENT_ONGEKI_VERSION_NAME: ${{secrets.CURRENT_ONGEKI_VERSION_NAME}}
-                  SHEET_SCRAPER_SCHEDULE: ${{secrets.SHEET_SCRAPER_SCHEDULE_PRD}}
               run: |
-                  echo "project_id = \"$PROJECT_ID\"" > ./terraform.tfvars
-                  echo "region = \"$REGION\"" >> ./terraform.tfvars
-                  echo "env = \"$ENV\"" >> ./terraform.tfvars
-                  echo "sega_user_name = \"$SEGA_USER_NAME\"" >> ./terraform.tfvars
-                  echo "sega_password = \"$SEGA_PASSWORD\"" >> ./terraform.tfvars
-                  echo "spread_sheet_id = \"$SPREAD_SHEET_ID\"" >> ./terraform.tfvars
-                  echo "sheet_storage_name = \"$SHEET_STORAGE_NAME_PRD\"" >> ./terraform.tfvars
-                  echo "current_ongeki_version_name = \"$CURRENT_ONGEKI_VERSION_NAME\"" >> ./terraform.tfvars
-                  echo "sheet_scraper_schedule = \"$SHEET_SCRAPER_SCHEDULE\"" >> ./terraform.tfvars
-            - name: "Apply"
-              run: |
-                  terraform init
-                  terraform validate
-                  terraform apply -auto-approve
+                  echo "project_id=\"${{ secrets.PROJECT_ID }}\"" > ./terraform.tfvars
+                  echo "region=\"${{ secrets.REGION }}\"" >> ./terraform.tfvars
+                  echo "env=\"prd\"" >> ./terraform.tfvars
+                  echo "sega_user_name=\"${{ secrets.SEGA_USER_NAME }}\"" >> ./terraform.tfvars
+                  echo "sega_password=\"${{ secrets.SEGA_PASSWORD }}\"" >> ./terraform.tfvars
+                  echo "spread_sheet_id=\"${{ secrets.SPREAD_SHEET_ID }}\"" >> ./terraform.tfvars
+                  echo "sheet_storage_name=\"${{ secrets.SHEET_STORAGE_NAME_PRD }}\"" >> ./terraform.tfvars
+                  echo "current_ongeki_version_name=\"${{ secrets.CURRENT_ONGEKI_VERSION_NAME }}\"" >> ./terraform.tfvars
+                  echo "sheet_scraper_schedule=\"${{ secrets.SHEET_SCRAPER_SCHEDULE_PRD }}\"" >> ./terraform.tfvars
 
-            - name: "Upload prd.tfstate"
-              if: always()
-              run: |
-                  gsutil cp terraform.tfstate gs://${{secrets.TERRAFORM_TFSTATE_BUCKET}}/prd.tfstate
+            - name: Apply Terraform
+              uses: ./.github/workflows/apply-terraform
+              with:
+                  terraform-tfstate-bucket: ${{ secrets.TERRAFORM_TFSTATE_BUCKET }}
+                  env: prd

@@ -1,0 +1,79 @@
+# ######################################################################
+#
+# Chrome extensionのビルド済みファイルをGCP Cloud Storageへアップロードを行うComposite Action
+#
+# 前提条件:
+#   - distディレクトリにビルド済みファイルが存在すること
+#   - GCP認証が完了していること
+# ```
+# runs-on: ubuntu-latest
+# defaults:
+#   run:
+#     working-directory: ./chrome-extension
+# permissions:
+#   id-token: write
+#   contents: read
+# ```
+# 入力:
+#   - chrome-extension-builds-bucket
+#
+# ######################################################################
+name: UploadChromeExtension
+description: Chrome extensionのビルド済みファイルをGCP Cloud Storageへアップロードを行う
+
+inputs:
+    chrome-extension-builds-bucket:
+        description: Chrome extension builds bucket name
+        required: true
+
+outputs:
+    is-success:
+        description: アップロードが成功したか("success" or "failure")
+        value: ${{ steps.set-result.outputs.result }}
+    zip-filename:
+        description: アップロードされたzipファイル名
+        value: ${{ steps.info.outputs.filename }}
+
+runs:
+    using: composite
+    steps:
+        - name: Zip dist directory
+          working-directory: ./chrome-extension
+          shell: bash
+          id: zip
+          continue-on-error: true
+          run: |
+              cd dist
+              zip -r ../dist.zip .
+
+        # 実行時の日時とcommit hashを組み合わせたファイル名を生成
+        # (GitHub Actionsのコンテキストにはローカルのタイムゾーンに合わせた時間が含まれていない)
+        - name: Get zip name
+          working-directory: ./chrome-extension
+          shell: bash
+          id: info
+          if: steps.zip.outcome == 'success'
+          run: |
+              COMMIT_HASH="${{ github.event.head_commit.id }}"
+              DATE=$(TZ=Asia/Tokyo date "+%Y-%m-%d_%H%M")
+              FILE_NAME="${DATE}_${COMMIT_HASH}.zip"
+              echo "filename=$FILE_NAME" >> $GITHUB_OUTPUT
+
+        - name: Upload to GCP Cloud Storage
+          working-directory: ./chrome-extension
+          shell: bash
+          id: upload
+          continue-on-error: true
+          if: steps.info.outcome == 'success'
+          run: |
+              gsutil cp dist.zip gs://${{inputs.chrome-extension-builds-bucket}}/${{ steps.info.outputs.filename }}
+
+        - name: Set result
+          id: set-result
+          shell: bash
+          run: |
+              if [ "${{ steps.zip.outcome }}" == "success" ] && [ "${{ steps.upload.outcome }}" == "success" ]; then
+                  echo "result=success" >> $GITHUB_OUTPUT
+              else
+                  echo "result=failure" >> $GITHUB_OUTPUT
+              fi

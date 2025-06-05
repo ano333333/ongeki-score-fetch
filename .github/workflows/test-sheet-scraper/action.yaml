@@ -1,0 +1,46 @@
+# ######################################################################
+#
+# sheet-scraperのテストを実行する
+#
+# 前提条件:
+#   - テストに必要な.envファイルが作成されていること
+# ```
+# runs-on: ubuntu-latest
+# permissions:
+#   id-token: write
+#   contents: read
+# ```
+#
+# ######################################################################
+name: GCPSheetScraperTest
+description: sheet-scraperのテストを実行する
+
+outputs:
+    is-success:
+        description: テストが成功したか("success" or "failure")
+        value: ${{steps.test.outcome}}
+
+runs:
+    using: "composite"
+    steps:
+        - name: Setup Node.js
+          uses: actions/setup-node@v3
+          with:
+              node-version: "22"
+
+        - uses: pnpm/action-setup@v4
+          with:
+              version: 10.10.0
+
+        - name: "Install dependencies"
+          working-directory: ./gcp/sheet-scraper
+          shell: bash
+          run: |
+              pnpm install
+
+        - name: "Test"
+          id: "test"
+          working-directory: ./gcp/sheet-scraper
+          shell: bash
+          run: |
+              pnpm test

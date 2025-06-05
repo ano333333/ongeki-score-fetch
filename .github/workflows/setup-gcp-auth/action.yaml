@@ -1,0 +1,59 @@
+# ######################################################################
+#
+# GCP認証を行う
+#
+# 前提条件:
+# ```
+# runs-on: ubuntu-latest
+# permissions:
+#   id-token: write
+#   contents: read
+# ```
+# 入力:
+#   - WORKLOAD_IDENTITY_PROVIDER
+#   - SERVICE_ACCOUNT_EMAIL
+#   - REGION
+#
+# ######################################################################
+name: GCPAuthSetup
+description: GCP認証を行う
+
+inputs:
+    workload-identity-provider:
+        description: Workload Identity Provider
+        required: true
+    service-account-email:
+        description: Service Account Email
+        required: true
+    region:
+        description: GCP Region
+        required: true
+
+outputs:
+    is-success:
+        description: 認証が成功したか("success" or "failure")
+        value: ${{steps.setup.outcome}}
+
+runs:
+    using: "composite"
+    steps:
+        - uses: hashicorp/setup-terraform@v3
+
+        - id: "gcp-auth"
+          name: "Authenticate to GCP"
+          uses: "google-github-actions/auth@v1"
+          with:
+              create_credentials_file: true
+              workload_identity_provider: ${{inputs.workload-identity-provider}}
+              service_account: ${{inputs.service-account-email}}
+
+        - id: "setup"
+          name: "Activate GCP Service Account"
+          shell: bash
+          run: |
+              gcloud auth login --cred-file=$GOOGLE_APPLICATION_CREDENTIALS
+
+        - name: "Configure Docker to use GCP Artifact Registry"
+          shell: bash
+          run: |
+              gcloud auth configure-docker ${{inputs.region}}-docker.pkg.dev

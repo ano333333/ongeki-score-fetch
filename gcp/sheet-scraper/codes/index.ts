@@ -5,7 +5,7 @@ import fs from "node:fs";
 import { getStdRecordPageMusicDatas } from "./logics/getStdRecordPageMusicDatas";
 import { saveOngekiMypageAuth } from "./utils/saveOngekiMypageAuth";
 import { scrapeHtml } from "./utils/scrapeHtml";
-import { downloadFromCloudStorage } from "./utils/downloadFromSheetStorage";
+import { downloadLatestCsv } from "./utils/downloadLatestCsv";
 import { loadResultCsv } from "./logics/loadResultCsv";
 import { overwriteResultCsvRowsMap } from "./logics/overwriteResultCsvRowsMap";
 import { getPrmRecordPageMusicDatas } from "./logics/getPrmRecordPageMusicDatas";
@@ -40,11 +40,8 @@ const server = http.createServer(async (req, res) => {
 		// 2. スプレッドシートの情報取得
 		const spreadsheetDatas = await getSpreadsheetBeatmapInfos();
 
-		// 3. クラウドストレージからファイルダウンロード
-		const doesCsvExists = await downloadFromCloudStorage(
-			"result.csv",
-			localCsvPath,
-		);
+		// 3. クラウドストレージから最新のCSVファイルをダウンロード
+		const doesCsvExists = await downloadLatestCsv(bucketName, localCsvPath);
 
 		// 4. 古いデータが存在すればマージし、更新が必要ならば上書き
 		if (doesCsvExists) {

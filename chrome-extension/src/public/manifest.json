@@ -11,7 +11,7 @@
         "https://ongeki-score.net/music",
         "https://www.dropbox.com/oauth2/authorize",
         "https://content.dropboxapi.com/2/files/upload",
-        "https://storage.googleapis.com/sheet-storage-*/result.csv"
+        "https://storage.googleapis.com/sheet-storage-*/*"
     ],
     "permissions": ["cookies", "storage", "offscreen", "downloads", "tabs"],
     "background": {

@@ -24,7 +24,7 @@ jobs:
 
             - name: "Add env"
               run: |
-                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_PRD }}\"" >> .env
+                  echo "VITE_BEATMAP_DATA_BUCKET_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_BUCKET_URL_PRD }}\"" >> .env
 
             - name: Build Chrome Extension
               uses: ./.github/workflows/build-chromeex

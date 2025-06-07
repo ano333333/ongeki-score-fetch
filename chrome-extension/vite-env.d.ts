@@ -5,7 +5,7 @@ interface ViteTypeOptions {
 }
 
 interface ImportMetaEnv {
-	readonly VITE_BEATMAP_DATA_SOURCE_URL: string;
+	readonly VITE_BEATMAP_DATA_BUCKET_URL: string;
 }
 
 interface ImportMeta {

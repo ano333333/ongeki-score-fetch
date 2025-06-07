@@ -6,7 +6,7 @@ import type {
 import type { OutputTargetDataRowType } from "../adapters/outputTargetType";
 import type { ChrExtRuntimeMessageType } from "../messages";
 import { OngekiMypageUserDataSource } from "../adapters/userDataSource/ongekiMypageUserDataSource";
-import { OngekiScoreLogBeatmapDataSource } from "../adapters/beatmapDataSource/ongekiScoreLogBeatmapDataSource";
+import { GcsBeatmapDataSource } from "../adapters/beatmapDataSource/gcsBeatmapDataSource";
 
 console.log("start offscreenDataFetch.ts");
 
@@ -23,7 +23,7 @@ const fetch = async () => {
 	console.log("offscreenDataFetch.ts: fetch");
 	try {
 		const userDataSource = new OngekiMypageUserDataSource();
-		const beatmapDataSource = new OngekiScoreLogBeatmapDataSource();
+		const beatmapDataSource = new GcsBeatmapDataSource(import.meta.env.VITE_BEATMAP_DATA_BUCKET_URL);
 
 		const logger = async (log: string) => {
 			console.log(`offscreenDataFetch.ts: ${log}`);

@@ -2,19 +2,24 @@ import http from "node:http";
 import { getSpreadsheetBeatmapInfos } from "./getSpreadsheetBeatmapInfos";
 import { dumpReturnResultCsv } from "./dumpReturnResultCsv";
 import fs from "node:fs";
-import { uploadToSheetStorage } from "./utils/uploadToSheetStorage";
 import { getStdRecordPageMusicDatas } from "./logics/getStdRecordPageMusicDatas";
 import { saveOngekiMypageAuth } from "./utils/saveOngekiMypageAuth";
 import { scrapeHtml } from "./utils/scrapeHtml";
-import { downloadFromCloudStorage } from "./utils/downloadFromSheetStorage";
+import { downloadLatestCsv } from "./utils/downloadLatestCsv";
 import { loadResultCsv } from "./logics/loadResultCsv";
 import { overwriteResultCsvRowsMap } from "./logics/overwriteResultCsvRowsMap";
 import { getPrmRecordPageMusicDatas } from "./logics/getPrmRecordPageMusicDatas";
 import { createResultCsvRowsMap } from "./logics/createResultCsvRowsMap";
 import path from "node:path";
+import { Storage } from "@google-cloud/storage";
+import { updateFileWithCleanup } from "./utils/fileManager";
 
 const authFilePath = path.resolve(__dirname, "../auth.json");
 const localCsvPath = path.resolve(__dirname, "./result.csv");
+
+// Cloud Storage初期化
+const storage = new Storage();
+const bucketName = process.env.SHEET_STORAGE_NAME || "sheet-storage-stg";
 
 const server = http.createServer(async (req, res) => {
 	try {
@@ -35,11 +40,8 @@ const server = http.createServer(async (req, res) => {
 		// 2. スプレッドシートの情報取得
 		const spreadsheetDatas = await getSpreadsheetBeatmapInfos();
 
-		// 3. クラウドストレージからファイルダウンロード
-		const doesCsvExists = await downloadFromCloudStorage(
-			"result.csv",
-			localCsvPath,
-		);
+		// 3. クラウドストレージから最新のCSVファイルをダウンロード
+		const doesCsvExists = await downloadLatestCsv(bucketName, localCsvPath);
 
 		// 4. 古いデータが存在すればマージし、更新が必要ならば上書き
 		if (doesCsvExists) {
@@ -59,8 +61,16 @@ const server = http.createServer(async (req, res) => {
 			if (needsUpdate) {
 				console.log("needs update");
 				const csvDump = dumpReturnResultCsv(csvDatas);
-				fs.writeFileSync(localCsvPath, csvDump);
-				await uploadToSheetStorage(localCsvPath, "result.csv");
+
+				// ランダムID付きファイル名でGCSにアップロード
+				const newFileName = await updateFileWithCleanup(
+					storage,
+					bucketName,
+					"result",
+					"csv",
+					csvDump,
+				);
+				console.log(`Uploaded to GCS: ${newFileName}`);
 			} else {
 				console.log("no update");
 			}
@@ -79,8 +89,16 @@ const server = http.createServer(async (req, res) => {
 				spreadsheetDatas,
 			);
 			const csvDump = dumpReturnResultCsv(csvDatas);
-			fs.writeFileSync(localCsvPath, csvDump);
-			await uploadToSheetStorage(localCsvPath, "result.csv");
+
+			// ランダムID付きファイル名でGCSにアップロード
+			const newFileName = await updateFileWithCleanup(
+				storage,
+				bucketName,
+				"result",
+				"csv",
+				csvDump,
+			);
+			console.log(`Uploaded to GCS: ${newFileName}`);
 		}
 	} catch (e) {
 		console.error(e);

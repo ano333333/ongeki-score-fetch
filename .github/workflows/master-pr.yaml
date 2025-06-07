@@ -31,7 +31,7 @@ jobs:
 
             - name: create .env
               run: |
-                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG }}\"" > .env
+                  echo "VITE_BEATMAP_DATA_BUCKET_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_BUCKET_URL_STG }}\"" > .env
 
             - uses: ./.github/workflows/build-chromeex/
               id: build
@@ -54,7 +54,7 @@ jobs:
 
             - name: create .env
               run: |
-                  echo "VITE_BEATMAP_DATA_SOURCE_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_SOURCE_URL_STG }}\"" > .env
+                  echo "VITE_BEATMAP_DATA_BUCKET_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_BUCKET_URL_STG }}\"" > .env
 
             - uses: ./.github/workflows/test-chromeex/
               id: test

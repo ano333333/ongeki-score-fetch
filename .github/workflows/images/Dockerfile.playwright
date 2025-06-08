@@ -16,5 +16,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh \
 # npmのアップデート
 RUN npm install -g npm@latest
 
+# playwrightを使用するインストール用package.jsonを作成
+RUN echo '{"dependencies": {"playwright": "latest"}}' > package.json
+
 # Playwrightのインストール（必要な依存関係を含む）
+RUN npm install
 RUN npx playwright install --with-deps 

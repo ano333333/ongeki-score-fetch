@@ -16,7 +16,12 @@ jobs:
         permissions:
             id-token: write
             contents: read
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
+        container:
+            image: ghcr.io/ano333333/ongeki-score-fetch/node:24.04
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.CR_PAT }}
         defaults:
             run:
                 working-directory: ./chrome-extension
@@ -47,13 +52,19 @@ jobs:
         permissions:
             id-token: write
             contents: read
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         defaults:
             run:
                 working-directory: ./gcp
         steps:
             - name: "Checkout"
               uses: actions/checkout@v3
+
+            - name: "Setup Terraform"
+              uses: hashicorp/setup-terraform@v3
+
+            - name: "Setup Google Cloud CLI"
+              uses: google-github-actions/setup-gcloud@v2
 
             - uses: ./.github/workflows/setup-gcp-auth/
               with:

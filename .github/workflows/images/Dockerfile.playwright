@@ -16,9 +16,33 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh \
 # npmのアップデート
 RUN npm install -g npm@latest
 
-# playwrightを使用するインストール用package.jsonを作成
-RUN echo '{"dependencies": {"playwright": "latest"}}' > package.json
+# Playwright環境変数の設定
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Playwrightのインストール（必要な依存関係を含む）
+# 最小限のNodeプロジェクトを作成
+WORKDIR /opt/playwright-project
+
+# package.jsonを作成
+RUN echo '{\
+  "name": "playwright-container",\
+  "version": "1.0.0",\
+  "type": "module",\
+  "devDependencies": {\
+    "@vitest/browser": "^3.1.4",\
+    "playwright": "^1.52.0",\
+    "vitest": "^3.1.4",\
+    "vitest-browser-vue": "^0.2.0"\
+  }\
+}' > package.json
+
+# 依存関係のインストール
 RUN npm install
-RUN npx playwright install --with-deps 
+
+# Playwrightブラウザのインストール（chromiumを明示的に指定）
+RUN npx playwright install chromium --with-deps
+
+# プロジェクトディレクトリを削除（ブラウザはグローバルにインストール済み）
+RUN rm -rf /opt/playwright-project
+
+# ワーキングディレクトリを元に戻す
+WORKDIR / 

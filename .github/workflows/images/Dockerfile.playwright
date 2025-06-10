@@ -1,0 +1,48 @@
+FROM ubuntu:24.04
+
+# 基本的なパッケージの更新とインストール
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js 22のインストール
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh \
+    && bash nodesource_setup.sh \
+    && apt-get install -y nodejs \
+    && rm nodesource_setup.sh \
+    && rm -rf /var/lib/apt/lists/*
+
+# npmのアップデート
+RUN npm install -g npm@latest
+
+# Playwright環境変数の設定
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# 最小限のNodeプロジェクトを作成
+WORKDIR /opt/playwright-project
+
+# package.jsonを作成
+RUN echo '{\
+  "name": "playwright-container",\
+  "version": "1.0.0",\
+  "type": "module",\
+  "devDependencies": {\
+    "@vitest/browser": "^3.1.4",\
+    "playwright": "^1.52.0",\
+    "vitest": "^3.1.4",\
+    "vitest-browser-vue": "^0.2.0"\
+  }\
+}' > package.json
+
+# 依存関係のインストール
+RUN npm install
+
+# Playwrightブラウザのインストール（chromiumを明示的に指定）
+RUN npx playwright install chromium --with-deps
+
+# プロジェクトディレクトリを削除（ブラウザはグローバルにインストール済み）
+RUN rm -rf /opt/playwright-project
+
+# ワーキングディレクトリを元に戻す
+WORKDIR / 

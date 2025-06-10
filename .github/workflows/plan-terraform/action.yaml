@@ -4,11 +4,18 @@
 # tfstateファイルのダウンロードとterraform planの実行を行う
 #
 # 前提条件:
+#   - Terraformがセットアップされていること (hashicorp/setup-terraform@v3)
+#   - Google Cloud CLIがセットアップされていること (google-github-actions/setup-gcloud@v2)
 # ```
 # runs-on: ubuntu-latest
+# container:
+#   image: ubuntu:24.04
 # defaults:
 #   run:
 #     working-directory: ./gcp
+# permissions:
+#   id-token: write
+#   contents: read
 # ```
 # 入力:
 #   - TERRAFORM_TFSTATE_BUCKET

@@ -4,8 +4,10 @@
 #
 # 前提条件:
 #   - テストに必要な.envファイルが作成されていること
+#   - Dockerコンテナ ongeki-score-fetch/node:24.04 を使用すること
 # ```
 # runs-on: ubuntu-latest
+# container: ongeki-score-fetch/node:24.04
 # permissions:
 #   id-token: write
 #   contents: read
@@ -23,11 +25,6 @@ outputs:
 runs:
     using: "composite"
     steps:
-        - name: Setup Node.js
-          uses: actions/setup-node@v3
-          with:
-              node-version: "22"
-
         - uses: pnpm/action-setup@v4
           with:
               version: 10.10.0

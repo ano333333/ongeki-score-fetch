@@ -19,7 +19,12 @@ jobs:
         needs:
             - updated-files-check
         if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true'}}
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
+        container:
+            image: ghcr.io/ano333333/ongeki-score-fetch/node:24.04
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.CR_PAT }}
         defaults:
             run:
                 working-directory: ./chrome-extension
@@ -45,7 +50,12 @@ jobs:
         permissions:
             id-token: write
             contents: read
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
+        container:
+            image: ghcr.io/ano333333/ongeki-score-fetch/playwright:24.04
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.CR_PAT }}
         defaults:
             run:
                 working-directory: ./chrome-extension
@@ -68,13 +78,19 @@ jobs:
         permissions:
             id-token: write
             contents: read
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         defaults:
             run:
                 working-directory: ./gcp
         steps:
             - name: "Checkout"
               uses: actions/checkout@v3
+
+            - name: "Setup Terraform"
+              uses: hashicorp/setup-terraform@v3
+
+            - name: "Setup Google Cloud CLI"
+              uses: google-github-actions/setup-gcloud@v2
 
             - uses: ./.github/workflows/setup-gcp-auth/
               with:
@@ -90,7 +106,6 @@ jobs:
                   echo "sega_user_name=\"${{ secrets.SEGA_USER_NAME }}\"" >> ./terraform.tfvars
                   echo "sega_password=\"${{ secrets.SEGA_PASSWORD }}\"" >> ./terraform.tfvars
                   echo "spread_sheet_id=\"${{ secrets.SPREAD_SHEET_ID }}\"" >> ./terraform.tfvars
-                  echo "sheet_storage_name=\"${{ secrets.SHEET_STORAGE_NAME_STG }}\"" >> ./terraform.tfvars
                   echo "current_ongeki_version_name=\"${{ secrets.CURRENT_ONGEKI_VERSION_NAME }}\"" >> ./terraform.tfvars
                   echo "sheet_scraper_schedule=\"${{ secrets.SHEET_SCRAPER_SCHEDULE_STG }}\"" >> ./terraform.tfvars
 
@@ -105,7 +120,7 @@ jobs:
         permissions:
             id-token: write
             contents: read
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         needs:
             - updated-files-check
         if: ${{needs.updated-files-check.outputs.gcp-updated == 'true'}}
@@ -128,7 +143,7 @@ jobs:
               id: test
 
     add-comment-to-pr:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         needs:
             - updated-files-check
             - chrome-extension-build

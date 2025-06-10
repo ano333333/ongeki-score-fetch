@@ -1,0 +1,18 @@
+FROM ubuntu:24.04
+
+# 基本的なパッケージの更新とインストール
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js 22のインストール
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh \
+    && bash nodesource_setup.sh \
+    && apt-get install -y nodejs \
+    && rm nodesource_setup.sh \
+    && rm -rf /var/lib/apt/lists/*
+
+# npmのアップデート
+RUN npm install -g npm@latest 

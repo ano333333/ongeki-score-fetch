@@ -80,7 +80,6 @@ jobs:
                   echo "sega_user_name=\"${{ secrets.SEGA_USER_NAME }}\"" >> ./terraform.tfvars
                   echo "sega_password=\"${{ secrets.SEGA_PASSWORD }}\"" >> ./terraform.tfvars
                   echo "spread_sheet_id=\"${{ secrets.SPREAD_SHEET_ID }}\"" >> ./terraform.tfvars
-                  echo "sheet_storage_name=\"${{ secrets.SHEET_STORAGE_NAME_STG }}\"" >> ./terraform.tfvars
                   echo "current_ongeki_version_name=\"${{ secrets.CURRENT_ONGEKI_VERSION_NAME }}\"" >> ./terraform.tfvars
                   echo "sheet_scraper_schedule=\"${{ secrets.SHEET_SCRAPER_SCHEDULE_STG }}\"" >> ./terraform.tfvars
 

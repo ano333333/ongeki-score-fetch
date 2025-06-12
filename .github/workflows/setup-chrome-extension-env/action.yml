@@ -1,0 +1,44 @@
+# ######################################################################
+#
+# Chrome Extension用の.envファイルを作成する
+#
+# 前提条件:
+#   - chrome-extensionディレクトリで実行されること
+# ```
+# defaults:
+#   run:
+#     working-directory: ./chrome-extension
+# permissions:
+#   contents: read
+# ```
+#
+# 入力:
+#   - env: デプロイ環境 (stg または prd)
+#
+# Repository Variables使用:
+#   - CHROME_EXTENSION_BEATMAP_DATA_BUCKET_URL_STG
+#   - CHROME_EXTENSION_BEATMAP_DATA_BUCKET_URL_PRD
+#
+# ######################################################################
+name: "Setup Chrome Extension Environment"
+description: "Chrome Extension用の.envファイルを作成します"
+
+inputs:
+    env:
+        description: "デプロイ環境 (stg または prd)"
+        required: true
+
+runs:
+    using: "composite"
+    steps:
+        - name: Create .env file for Chrome Extension
+          shell: bash
+          run: |
+              if [ "${{ inputs.env }}" = "stg" ]; then
+                  echo "VITE_BEATMAP_DATA_BUCKET_URL=\"${{ vars.CHROME_EXTENSION_BEATMAP_DATA_BUCKET_URL_STG }}\"" > .env
+              elif [ "${{ inputs.env }}" = "prd" ]; then
+                  echo "VITE_BEATMAP_DATA_BUCKET_URL=\"${{ vars.CHROME_EXTENSION_BEATMAP_DATA_BUCKET_URL_PRD }}\"" > .env
+              else
+                  echo "Error: Invalid environment. Use 'stg' or 'prd'."
+                  exit 1
+              fi

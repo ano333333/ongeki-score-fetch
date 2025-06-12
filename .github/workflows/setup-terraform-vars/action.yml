@@ -1,0 +1,66 @@
+# ######################################################################
+#
+# Terraform用のterraform.tfvarsファイルを作成する
+#
+# 前提条件:
+#   - gcpディレクトリで実行されること
+# ```
+# defaults:
+#   run:
+#     working-directory: ./gcp
+# permissions:
+#   contents: read
+# ```
+#
+# 入力:
+#   - env: デプロイ環境 (stg または prd)
+#   - project-id: GCPプロジェクトID
+#   - sega-user-name: SEGAユーザー名
+#   - sega-password: SEGAパスワード
+#
+# Repository Variables使用:
+#   - REGION
+#   - SPREAD_SHEET_ID
+#   - CURRENT_ONGEKI_VERSION_NAME
+#   - SHEET_SCRAPER_SCHEDULE_STG
+#   - SHEET_SCRAPER_SCHEDULE_PRD
+#
+# ######################################################################
+name: "Setup Terraform Variables"
+description: "Terraform用のterraform.tfvarsファイルを作成します"
+
+inputs:
+    env:
+        description: "デプロイ環境 (stg または prd)"
+        required: true
+    project-id:
+        description: "GCPプロジェクトID"
+        required: true
+    sega-user-name:
+        description: "SEGAユーザー名"
+        required: true
+    sega-password:
+        description: "SEGAパスワード"
+        required: true
+
+runs:
+    using: "composite"
+    steps:
+        - name: Create terraform.tfvars file
+          shell: bash
+          run: |
+              echo "project_id=\"${{ inputs.project-id }}\"" > ./terraform.tfvars
+              echo "region=\"${{ vars.REGION }}\"" >> ./terraform.tfvars
+              echo "env=\"${{ inputs.env }}\"" >> ./terraform.tfvars
+              echo "sega_user_name=\"${{ inputs.sega-user-name }}\"" >> ./terraform.tfvars
+              echo "sega_password=\"${{ inputs.sega-password }}\"" >> ./terraform.tfvars
+              echo "spread_sheet_id=\"${{ vars.SPREAD_SHEET_ID }}\"" >> ./terraform.tfvars
+              echo "current_ongeki_version_name=\"${{ vars.CURRENT_ONGEKI_VERSION_NAME }}\"" >> ./terraform.tfvars
+              if [ "${{ inputs.env }}" = "stg" ]; then
+                  echo "sheet_scraper_schedule=\"${{ vars.SHEET_SCRAPER_SCHEDULE_STG }}\"" >> ./terraform.tfvars
+              elif [ "${{ inputs.env }}" = "prd" ]; then
+                  echo "sheet_scraper_schedule=\"${{ vars.SHEET_SCRAPER_SCHEDULE_PRD }}\"" >> ./terraform.tfvars
+              else
+                  echo "Error: Invalid environment. Use 'stg' or 'prd'."
+                  exit 1
+              fi

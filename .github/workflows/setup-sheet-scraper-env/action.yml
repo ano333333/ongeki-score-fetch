@@ -1,0 +1,49 @@
+# ######################################################################
+#
+# Sheet Scraper用の.envファイルを作成する
+#
+# 注意: Sheet Scraperはテスト用途でのみ使用されるため、常にSTG環境で動作する。
+#       stg以外でこのenvを作成することは無いため、envをinputに取らない。
+#
+# 前提条件:
+#   - gcp/sheet-scraperディレクトリで実行されること
+# ```
+# defaults:
+#   run:
+#     working-directory: ./gcp/sheet-scraper
+# permissions:
+#   contents: read
+# ```
+#
+# 入力:
+#   - sega-user-name: SEGAユーザー名
+#   - sega-password: SEGAパスワード
+#
+# Repository Variables使用:
+#   - SPREAD_SHEET_ID
+#   - SHEET_STORAGE_NAME_STG
+#   - CURRENT_ONGEKI_VERSION_NAME
+#
+# ######################################################################
+name: "Setup Sheet Scraper Environment"
+description: "Sheet Scraper用の.envファイルを作成します"
+
+inputs:
+    sega-user-name:
+        description: "SEGAユーザー名"
+        required: true
+    sega-password:
+        description: "SEGAパスワード"
+        required: true
+
+runs:
+    using: "composite"
+    steps:
+        - name: Create .env file for Sheet Scraper
+          shell: bash
+          run: |
+              echo "SEGA_USER_NAME=\"${{ inputs.sega-user-name }}\"" > .env
+              echo "SEGA_PASSWORD=\"${{ inputs.sega-password }}\"" >> .env
+              echo "SPREAD_SHEET_ID=\"${{ vars.SPREAD_SHEET_ID }}\"" >> .env
+              echo "SHEET_STORAGE_NAME=\"${{ vars.SHEET_STORAGE_NAME_STG }}\"" >> .env
+              echo "CURRENT_ONGEKI_VERSION_NAME=\"${{ vars.CURRENT_ONGEKI_VERSION_NAME }}\"" >> .env

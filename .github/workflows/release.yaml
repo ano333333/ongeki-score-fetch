@@ -27,9 +27,9 @@ jobs:
             - name: "Checkout"
               uses: actions/checkout@v3
 
-            - name: "Add env"
-              run: |
-                  echo "VITE_BEATMAP_DATA_BUCKET_URL=\"${{ secrets.CHROME_EXTENSION_BEATMAP_DATA_BUCKET_URL_PRD }}\"" >> .env
+            - uses: ./.github/workflows/setup-chrome-extension-env/
+              with:
+                  env: "prd"
 
             - name: Build Chrome Extension
               uses: ./.github/workflows/build-chromeex
@@ -67,16 +67,12 @@ jobs:
                   service-account-email: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
                   region: ${{ secrets.REGION }}
 
-            - name: "Copy variables.tf"
-              run: |
-                  echo "project_id=\"${{ secrets.PROJECT_ID }}\"" > ./terraform.tfvars
-                  echo "region=\"${{ secrets.REGION }}\"" >> ./terraform.tfvars
-                  echo "env=\"prd\"" >> ./terraform.tfvars
-                  echo "sega_user_name=\"${{ secrets.SEGA_USER_NAME }}\"" >> ./terraform.tfvars
-                  echo "sega_password=\"${{ secrets.SEGA_PASSWORD }}\"" >> ./terraform.tfvars
-                  echo "spread_sheet_id=\"${{ secrets.SPREAD_SHEET_ID }}\"" >> ./terraform.tfvars
-                  echo "current_ongeki_version_name=\"${{ secrets.CURRENT_ONGEKI_VERSION_NAME }}\"" >> ./terraform.tfvars
-                  echo "sheet_scraper_schedule=\"${{ secrets.SHEET_SCRAPER_SCHEDULE_PRD }}\"" >> ./terraform.tfvars
+            - uses: ./.github/workflows/setup-terraform-vars/
+              with:
+                  env: "prd"
+                  project-id: ${{ secrets.PROJECT_ID }}
+                  sega-user-name: ${{ secrets.SEGA_USER_NAME }}
+                  sega-password: ${{ secrets.SEGA_PASSWORD }}
 
             - name: Apply Terraform
               uses: ./.github/workflows/apply-terraform

@@ -8,7 +8,9 @@
         "build": "vue-tsc && vite build",
         "preview": "vite preview",
         "test": "vitest",
-        "test:ci": "vitest"
+        "test:ci": "vitest",
+        "format": "prettier --write . && biome format --write",
+        "lint": "biome lint --write"
     },
     "dependencies": {
         "@headlessui/vue": "^1.7.16",

@@ -93,6 +93,26 @@ gcp/
 
 ## terraformスタックのデプロイ
 
+### 事前セットアップ
+
+Terraformを使用する前に、以下を実施する。
+
+1. `terraform.tfvars` の作成
+   `terraform.tfvars.example` をコピーして作成する。
+
+```bash
+cp terraform.tfvars.example terraform.tfvars
+```
+
+2. `gcloud` のセットアップ
+   Artifact Registry にアクセスするため、以下を実行する。
+
+```bash
+gcloud auth configure-docker <region-name>.pkg.dev
+```
+
+Reference: https://docs.cloud.google.com/artifact-registry/docs/docker/authentication?hl=ja
+
 ### 開発時テスト用
 
 terraformのテストのために1スタックのみをデプロイする場合、

@@ -8,7 +8,10 @@
     in {
       devShells = gen systems (system:
         let
-          pkgs = import nixpkgs { inherit system; };
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
           browsers = (builtins.fromJSON (builtins.readFile
             "${pkgs.playwright-driver}/browsers.json")).browsers;
           chromium-revision = (builtins.head
@@ -23,6 +26,9 @@
               nodejs_24
               nodePackages.pnpm
               playwright-driver.browsers
+
+              terraform
+              google-cloud-sdk
             ];
             shellHook = ''
               echo "entered devShell"

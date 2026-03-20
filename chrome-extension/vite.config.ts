@@ -2,60 +2,42 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
-export default defineConfig({
-	root: "src",
-	envDir: "../",
-	build: {
-		rollupOptions: {
-			input: {
-				popup: "src/popup.html",
-				offscreenDataFetch: "src/offscreenDataFetch.html",
-				background: "src/background.ts",
-				option: "src/options.html",
-				redirect: "src/redirect.html",
-			},
-			output: {
-				entryFileNames: "[name].js", // 追加: 出力ファイル名を指定
-			},
-		},
-		outDir: "../dist",
-		assetsDir: ".",
-		emptyOutDir: true,
-	},
-	plugins: [vue()],
-	server: {
-		port: 3000,
-		open: true,
-	},
+export default defineConfig( {
+  root: "src",
+  envDir: "../",
+  build: {
+    rollupOptions: {
+      input: {
+        popup: "src/popup.html",
+        offscreenDataFetch: "src/offscreenDataFetch.html",
+        background: "src/background.ts",
+        option: "src/options.html",
+        redirect: "src/redirect.html",
+      },
+      output: {
+        entryFileNames: "[name].js", // 追加: 出力ファイル名を指定
+      },
+    },
+    outDir: "../dist",
+    assetsDir: ".",
+    emptyOutDir: true,
+  },
+  plugins: [vue()],
+  server: {
+    port: 3000,
+    open: true,
+  },
   test: {
     projects: [
       {
-        root: ".",
-		    test: {
-	        include: ["tests/**/*.test.ts"],
+        root: "..",
+        test: {
+          include: ["tests/**/*.test.ts"],
           exclude: ["tests/**/*.browser.test.ts"],
-	        name: "unit",
-	        environment: "node",
-	      },
-      },
-	    {
-		    root: ".",
-		    test: {
-			    include: ["tests/**/*.browser.test.ts"],
-			    name: "browser",
-	        browser: {
-	          provider: "playwright",
-		        enabled: true,
-            instances: [
-              {
-                browser: "chromium",
-              },
-            ],
-          },
+          name: "unit",
+          environment: "node",
         },
-        plugins: [vue()],
-        setupFiles: ["vitest-browser-vue"],
-	    },
+      },
     ],
   },
 });

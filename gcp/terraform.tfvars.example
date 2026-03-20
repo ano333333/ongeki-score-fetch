@@ -1,0 +1,20 @@
+# GCP Project Configuration
+project_id = "your-gcp-project-id"
+region = "asia-northeast1"
+
+# Environment (stg or prd)
+env = "stg"
+
+# SEGA Account Credentials
+sega_user_name = "your-sega-username"
+sega_password = "your-sega-password"
+
+# Google Spreadsheet ID
+spread_sheet_id = "your-spreadsheet-id"
+
+# Current Ongeki Version Name
+current_ongeki_version_name = "current-version-name"
+
+# Sheet Scraper Schedule (cron format)
+# Example: "0 */6 * * *" (every 6 hours)
+sheet_scraper_schedule = "0 */6 * * *"

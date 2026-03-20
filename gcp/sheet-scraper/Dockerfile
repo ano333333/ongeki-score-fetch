@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.48.1
+FROM mcr.microsoft.com/playwright:v1.57.0
 
 RUN apt-get update
 RUN apt-get install -y curl

@@ -4,15 +4,26 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
+    gnupg \
+    git \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Node.js 22のインストール
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh \
+# Node.js 24のインストール (flake.nixのnodejs_24に合わせる)
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x -o nodesource_setup.sh \
     && bash nodesource_setup.sh \
     && apt-get install -y nodejs \
     && rm nodesource_setup.sh \
     && rm -rf /var/lib/apt/lists/*
 
-# npmのアップデート
-RUN npm install -g npm@latest 
+# Google Cloud CLIのインストール (gcloud / gsutil)
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" \
+    > /etc/apt/sources.list.d/google-cloud-sdk.list \
+    && curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+    | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg \
+    && apt-get update \
+    && apt-get install -y google-cloud-cli \
+    && rm -rf /var/lib/apt/lists/*
+
+# flake.nix/devShellと揃えるため、pnpmを有効化
+RUN corepack enable && corepack prepare pnpm@10.10.0 --activate

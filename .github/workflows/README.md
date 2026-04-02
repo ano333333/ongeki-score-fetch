@@ -24,8 +24,9 @@ GitHub Actionsの実行時間短縮を目的として、Node.jsとPlaywrightが�
 #### ongeki-score-fetch/node:24.04
 
 **基盤**: Ubuntu 24.04 LTS  
-**Node.js**: v22 (LTS)  
-**追加パッケージ**: curl, unzip, git
+**Node.js**: v24 (flake.nixの`nodejs_24`に準拠)  
+**追加パッケージ**: curl, unzip, git, google-cloud-cli（gcloud / gsutil）
+**パッケージ管理**: pnpm 10.10.0（corepack経由）
 
 **用途**:
 
@@ -35,9 +36,10 @@ GitHub Actionsの実行時間短縮を目的として、Node.jsとPlaywrightが�
 #### ongeki-score-fetch/playwright:24.04
 
 **基盤**: Ubuntu 24.04 LTS  
-**Node.js**: v22 (LTS)  
+**Node.js**: v24 (flake.nixの`nodejs_24`に準拠)  
 **Playwright**: プリインストール（ブラウザ込み）  
-**追加パッケージ**: curl, unzip, git
+**追加パッケージ**: curl, git  
+**パッケージ管理**: pnpm 10.10.0（corepack経由）
 
 **特徴**:
 

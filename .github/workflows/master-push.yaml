@@ -1,8 +1,9 @@
-name: github actions on push to features/52
+name: github actions on push to master/features/52
 
 on:
     push:
         branches:
+            - "master"
             - "features/52"
 
 jobs:

@@ -1,10 +1,9 @@
-name: github actions on push to master/features/52
+name: github actions on push to master
 
 on:
     push:
         branches:
             - "master"
-            - "features/52"
 
 jobs:
     updated-files-check:

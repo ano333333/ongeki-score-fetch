@@ -37,4 +37,6 @@ describe("scrapePremiumRecordPage", () => {
 			),
 		).toThrow();
 	});
+
+  // TODO: プレミアムコース未登録のページでエラーを投げる
 });

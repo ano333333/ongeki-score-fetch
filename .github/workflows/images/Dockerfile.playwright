@@ -1,20 +1,21 @@
 FROM ubuntu:24.04
 
 # 基本的なパッケージの更新とインストール
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Node.js 22のインストール
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh \
+# Node.js 24のインストール (flake.nixのnodejs_24に合わせる)
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x -o nodesource_setup.sh \
     && bash nodesource_setup.sh \
-    && apt-get install -y nodejs \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm nodesource_setup.sh \
     && rm -rf /var/lib/apt/lists/*
 
-# npmのアップデート
-RUN npm install -g npm@latest
+# flake.nix/devShellと揃えるため、pnpmを有効化
+RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 
 # Playwright環境変数の設定
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
@@ -45,4 +46,4 @@ RUN npx playwright install chromium --with-deps
 RUN rm -rf /opt/playwright-project
 
 # ワーキングディレクトリを元に戻す
-WORKDIR / 
+WORKDIR /

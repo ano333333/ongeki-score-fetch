@@ -1,5 +1,10 @@
 import { JSDOM } from "jsdom";
 
+/**
+ * プレミアムコースのレコードページのhtmlから、そのページに含まれるタイトルの一覧を取得する
+ * @param html
+ * @returns string[] タイトルの配列
+ */
 export function scrapePremiumRecordPage(html: string) {
 	if (html.includes("エラー")) {
 		throw new Error();

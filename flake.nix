@@ -29,6 +29,7 @@
 
               terraform
               google-cloud-sdk
+              tflint
             ];
             shellHook = ''
               echo "entered devShell"

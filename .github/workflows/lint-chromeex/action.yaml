@@ -1,0 +1,56 @@
+# ######################################################################
+#
+# chrome-extensionのフォーマット・リントチェックを行う
+#
+# 前提条件:
+#   - Dockerコンテナ ongeki-score-fetch/node:24.04 を使用すること
+# ```
+# runs-on: ubuntu-latest
+# container: ongeki-score-fetch/node:24.04
+# permissions:
+#   id-token: write
+#   contents: read
+# ```
+#
+# ######################################################################
+name: LintChromeExtension
+description: chrome-extensionのフォーマット・リントチェックを行う
+outputs:
+    is-success:
+        description: チェックが成功したか("success" or "failure")
+        value: ${{ steps.set-result.outputs.result }}
+runs:
+    using: composite
+    steps:
+        - name: Install dependencies
+          working-directory: ./chrome-extension
+          shell: bash
+          run: |
+              npm install
+
+        - name: Run Prettier check
+          id: prettier
+          working-directory: ./chrome-extension
+          shell: bash
+          continue-on-error: true
+          run: |
+              npx prettier --check .
+
+        - name: Run Biome check
+          id: biome
+          working-directory: ./chrome-extension
+          shell: bash
+          continue-on-error: true
+          run: |
+              npx biome check --error-on-warnings .
+
+        - name: Set result
+          id: set-result
+          shell: bash
+          run: |
+              if [ "${{ steps.prettier.outcome }}" == "success" ] && [ "${{ steps.biome.outcome }}" == "success" ]; then
+                  echo "result=success" >> $GITHUB_OUTPUT
+              else
+                  echo "result=failure" >> $GITHUB_OUTPUT
+                  exit 1
+              fi

@@ -1,8 +1,26 @@
 terraform {
+  required_version = ">= 1.0"
+
   required_providers {
     docker = {
       source  = "kreuzwerker/docker"
       version = "3.0.2"
+    }
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 7.0"
+    }
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "~> 7.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
     }
   }
 }
@@ -26,10 +44,6 @@ provider "docker" {
   registry_auth {
     address = local.docker_host
   }
-}
-
-data "google_project" "project" {
-  project_id = var.project_id
 }
 
 resource "random_id" "random_suffix" {
@@ -226,5 +240,6 @@ resource "google_cloud_scheduler_job" "sheet_scraper_scheduler" {
 }
 
 output "suffix" {
-  value = local.suffix
+  description = "Environment suffix used for resource naming"
+  value       = local.suffix
 }

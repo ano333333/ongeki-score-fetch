@@ -13,12 +13,37 @@ jobs:
     updated-files-check:
         uses: ./.github/workflows/sub-updated-files-check.yaml
 
+    chrome-extension-lint:
+        outputs:
+            is-success: ${{steps.lint.outputs.is-success}}
+        needs:
+            - updated-files-check
+        if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true'}}
+        runs-on: ubuntu-24.04
+        container:
+            image: ghcr.io/ano333333/ongeki-score-fetch/node:24.04
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.CR_PAT }}
+        defaults:
+            run:
+                working-directory: ./chrome-extension
+        permissions:
+            id-token: write
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: ./.github/workflows/lint-chromeex/
+              id: lint
+
     chrome-extension-build:
         outputs:
             is-success: ${{steps.build.outputs.is-success}}
         needs:
             - updated-files-check
-        if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true'}}
+            - chrome-extension-lint
+        if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true' && needs.chrome-extension-lint.outputs.is-success == 'success'}}
         runs-on: ubuntu-24.04
         container:
             image: ghcr.io/ano333333/ongeki-score-fetch/node:24.04
@@ -46,7 +71,8 @@ jobs:
             is-success: ${{steps.test.outputs.is-success}} # 'success' or 'failure'
         needs:
             - updated-files-check
-        if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true'}}
+            - chrome-extension-lint
+        if: ${{needs.updated-files-check.outputs.chrome-extension-updated == 'true' && needs.chrome-extension-lint.outputs.is-success == 'success'}}
         permissions:
             id-token: write
             contents: read
@@ -69,11 +95,41 @@ jobs:
             - uses: ./.github/workflows/test-chromeex/
               id: test
 
+    gcp-lint:
+        needs:
+            - updated-files-check
+        if: ${{needs.updated-files-check.outputs.gcp-updated == 'true'}}
+        runs-on: ubuntu-24.04
+        defaults:
+            run:
+                working-directory: ./gcp
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+
+            - name: Terraform fmt check
+              run: terraform fmt -check -recursive
+
+            - name: Setup TFLint
+              uses: terraform-linters/setup-tflint@v4
+              with:
+                  tflint_version: latest
+
+            - name: Initialize TFLint
+              run: tflint --init
+
+            - name: Run TFLint
+              run: tflint --format compact
+
     plan-stg:
         outputs:
             is-success: ${{steps.plan.outcome}} # 'success' or 'failure'
         needs:
             - updated-files-check
+            - gcp-lint
         if: ${{needs.updated-files-check.outputs.gcp-updated == 'true'}}
         permissions:
             id-token: write
@@ -123,6 +179,7 @@ jobs:
         runs-on: ubuntu-24.04
         needs:
             - updated-files-check
+            - gcp-lint
         if: ${{needs.updated-files-check.outputs.gcp-updated == 'true'}}
         defaults:
             run:

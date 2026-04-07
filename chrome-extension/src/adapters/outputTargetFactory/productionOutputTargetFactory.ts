@@ -1,8 +1,8 @@
-import type { IOutputTargetFactory } from "./base";
 import type {
 	OutputTargetDataRowType,
 	OutputTargetType,
 } from "../outputTargetType";
+import type { IOutputTargetFactory } from "./base";
 
 type DropboxTokenIssueResponseType = {
 	access_token: string;
@@ -37,7 +37,7 @@ export default class ProductionOutputTargetFactory
 		return async (datas, option, logger) => {
 			await logger("dropboxへの認証開始");
 			let accessToken = "";
-			let newExpires = undefined;
+			let newExpires: number | undefined;
 			if (
 				option.accessToken &&
 				option.expires &&

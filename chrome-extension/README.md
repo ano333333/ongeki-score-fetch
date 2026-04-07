@@ -12,7 +12,7 @@ classDiagram
     class UserDataSource {
     }
     IUserDataSource <|-- UserDataSource
-    
+
     class IScoreDataSource {
         <<interface>>
     }
@@ -104,7 +104,7 @@ classDiagram
 
 - **View層**: .vueファイルとして実装。ライフタイムの開始時にcontrollerをインスタンス化し、各インターフェースをDIする
 - **Controller層**: データフローとビジネスロジックを担当し、状態を持たない
-- **状態管理**: 
+- **状態管理**:
   - 1つのライフタイムのみで用いられる状態はviewが管理
   - 複数のライフタイムで用いられる状態の永続化はLocalStorageが行う
 - **データフェッチ処理**: ポップアップの1ライフタイムに収まらないため、1つのoffscreenで行う
@@ -228,6 +228,7 @@ title,genre,character,versionMaster,versionLunatic,constantBasic,constantAdvance
 ```
 
 **カラム説明**:
+
 - title: 楽曲の正式名称
 - genre: 楽曲ジャンル分類
 - character: 担当キャラクター名
@@ -257,35 +258,35 @@ Chrome Extension内部のコンポーネント間通信は、型安全なメッ�
 
 ```ts
 export type ChrExtRuntimeMessageType =
-    | {
-        type: "is-fetch-processing";
-        from: "popup";
-        to: "backgroundWorker";
-      }
-    | {
-        type: "start-fetch";
-        from: "popup";
-        to: "backgroundWorker";
-      }
-    | {
-        type: "start-fetch";
-        from: "backgroundWorker";
-        to: "offscreenDataFetch";
-      }
-    | {
-        type: "save-fetch-log";
-        from: "offscreenDataFetch";
-        to: "backgroundWorker";
-        logType: "progress" | "error" | "finish";
-        logMessage: string;
-      }
-    | {
-        type: "fetch-finished";
-        from: "offscreenDataFetch";
-        to: "backgroundWorker";
-        datas: OutputTargetDataRowType[];
-        error?: string;
-      };
+  | {
+      type: "is-fetch-processing";
+      from: "popup";
+      to: "backgroundWorker";
+    }
+  | {
+      type: "start-fetch";
+      from: "popup";
+      to: "backgroundWorker";
+    }
+  | {
+      type: "start-fetch";
+      from: "backgroundWorker";
+      to: "offscreenDataFetch";
+    }
+  | {
+      type: "save-fetch-log";
+      from: "offscreenDataFetch";
+      to: "backgroundWorker";
+      logType: "progress" | "error" | "finish";
+      logMessage: string;
+    }
+  | {
+      type: "fetch-finished";
+      from: "offscreenDataFetch";
+      to: "backgroundWorker";
+      datas: OutputTargetDataRowType[];
+      error?: string;
+    };
 ```
 
 ### 通信フロー
@@ -300,41 +301,41 @@ export type ChrExtRuntimeMessageType =
 
 ```ts
 export type BeatmapDataType = {
-    name: string;
-    genre: string | undefined;
-    character: string | undefined;
-    version: string | undefined;
-    difficulty: BeatmapDataDifficultyType;
-    const: number | undefined;
+  name: string;
+  genre: string | undefined;
+  character: string | undefined;
+  version: string | undefined;
+  difficulty: BeatmapDataDifficultyType;
+  const: number | undefined;
 };
 
 export type BeatmapDataDifficultyType =
-    | "BASIC"
-    | "ADVANCED"
-    | "EXPERT"
-    | "MASTER"
-    | "LUNATIC";
+  | "BASIC"
+  | "ADVANCED"
+  | "EXPERT"
+  | "MASTER"
+  | "LUNATIC";
 ```
 
 ### OutputTargetDataRowType（出力データ）
 
 ```ts
 export type OutputTargetDataRowType = {
-    difficulty: OutputTargetDataRowDifficultyType;
-    level: string;
-    name: string;
-    genre: string;
-    technicalHighScore: number;
-    overDamageHighScore: number;
-    battleHighScore: number;
-    fullBell: boolean;
-    allBreak: boolean;
-    const: number | undefined;
-    platinumHighScore: number;
-    platinumStar: number;
-    platinumMaxScore: number;
-    character: string | undefined;
-    version: string | undefined;
+  difficulty: OutputTargetDataRowDifficultyType;
+  level: string;
+  name: string;
+  genre: string;
+  technicalHighScore: number;
+  overDamageHighScore: number;
+  battleHighScore: number;
+  fullBell: boolean;
+  allBreak: boolean;
+  const: number | undefined;
+  platinumHighScore: number;
+  platinumStar: number;
+  platinumMaxScore: number;
+  character: string | undefined;
+  version: string | undefined;
 };
 ```
 
@@ -344,20 +345,20 @@ export type OutputTargetDataRowType = {
 
 ```ts
 export type RawLocalStorageVer1Type = {
-    version: 1;
-    progresses: Array<{
-        createdAt: number;
-        message: string;
-        type: "progress" | "error" | "finished";
-    }>;
-    outputTarget: "download" | "dropbox";
-    outputTargetOptions: {
-        dropbox: {
-            outputPath: string;
-            accessToken?: string;
-            expires?: number;
-        };
+  version: 1;
+  progresses: Array<{
+    createdAt: number;
+    message: string;
+    type: "progress" | "error" | "finished";
+  }>;
+  outputTarget: "download" | "dropbox";
+  outputTargetOptions: {
+    dropbox: {
+      outputPath: string;
+      accessToken?: string;
+      expires?: number;
     };
+  };
 };
 ```
 
@@ -365,14 +366,14 @@ export type RawLocalStorageVer1Type = {
 
 ```ts
 export const defaultRawLocalStorageVer1 = {
-    version: 1,
-    progresses: [],
-    outputTarget: "download",
-    outputTargetOptions: {
-        dropbox: {
-            outputPath: "ongeki-score-fetch/data.csv",
-        },
+  version: 1,
+  progresses: [],
+  outputTarget: "download",
+  outputTargetOptions: {
+    dropbox: {
+      outputPath: "ongeki-score-fetch/data.csv",
     },
+  },
 } as const;
 ```
 
@@ -386,19 +387,19 @@ export const defaultRawLocalStorageVer1 = {
 
 ```ts
 export type LocalStorageType = {
-    progresses: Array<{
-        createdAt: number;
-        message: string;
-        type: "progress" | "error" | "finish";
-    }>;
-    outputTarget: "download" | "dropbox";
-    outputTargetOptions: {
-        dropbox: {
-            outputPath: string;
-            accessToken: string | undefined;
-            expires: number | undefined;
-        };
+  progresses: Array<{
+    createdAt: number;
+    message: string;
+    type: "progress" | "error" | "finish";
+  }>;
+  outputTarget: "download" | "dropbox";
+  outputTargetOptions: {
+    dropbox: {
+      outputPath: string;
+      accessToken: string | undefined;
+      expires: number | undefined;
     };
+  };
 };
 ```
 
@@ -407,7 +408,7 @@ export type LocalStorageType = {
 ### データソース
 
 - **IUserDataSource/UserDataSource**: ユーザーデータの取得
-- **IScoreDataSource/ScoreDataSource**: スコアデータの取得  
+- **IScoreDataSource/ScoreDataSource**: スコアデータの取得
 - **IBeatmapDataSource**: 譜面データの取得（抽象化）
   - **OngekiScoreLogBeatmapDataSource**: オンゲキスコアログからの譜面データ取得
   - **GcsBeatmapDataSource**: Google Cloud Storageからの譜面データ取得
@@ -428,4 +429,4 @@ export type LocalStorageType = {
 
 - **IBackgroundWorker/ChrExtBackgroundWorker**: Background Workerとの通信インターフェース
 - **BackgroundWorker**: Chrome Extension のbackground script
-- **Offscreen**: Chrome Extension のoffscreen document 
+- **Offscreen**: Chrome Extension のoffscreen document

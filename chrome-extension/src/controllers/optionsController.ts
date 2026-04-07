@@ -37,7 +37,7 @@ export class OptionsController {
 	 */
 	isOutputPathValid(path: string) {
 		// パスに使用できない文字が含まれていればfalse
-		const unusable = /[\\:\*\?\"<>\|]/;
+		const unusable = /[\\:*?"<>|]/;
 		if (path.search(unusable) !== -1) {
 			return false;
 		}

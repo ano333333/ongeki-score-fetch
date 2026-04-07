@@ -199,6 +199,7 @@ export class OngekiMypageUserDataSource implements IUserDataSource {
 					//("1,033,501" --replace-> "1033,501" --replace-> "1033501" --parseInt-> 1033501)
 					const battleHighScore = Number.parseInt(
 						battleHighScoreStr.replace(",", "").replace(",", ""),
+						10,
 					);
 					const table0tbodytr1td2 =
 						table0tbodytr1.getElementsByTagName("td")[2];
@@ -206,6 +207,7 @@ export class OngekiMypageUserDataSource implements IUserDataSource {
 					//「,」を除去し、intに変換
 					const technicalHighScore = Number.parseInt(
 						technicalHighScoreStr.replace(",", "").replace(",", ""),
+						10,
 					);
 					const div1 = formdivs[1];
 					const div1table0 = div1.getElementsByTagName("table")[0];
@@ -252,10 +254,12 @@ export class OngekiMypageUserDataSource implements IUserDataSource {
 					// "1,462" -> "1462" -> 1462
 					const platinumHighScore = Number.parseInt(
 						platinumHighScoreStr.replace(",", ""),
+						10,
 					);
 					// "1,536" -> "1536" -> 1536
 					const platinumMaxScore = Number.parseInt(
 						platinumMaxScoreStr.replace(",", ""),
+						10,
 					);
 					const div1div0 = getDirectDivChildren(div1)[0];
 					const div1imgs = div1div0.getElementsByTagName("img");

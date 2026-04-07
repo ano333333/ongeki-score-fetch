@@ -1,5 +1,5 @@
-import type { IOutputTargetFactory } from "./base";
 import type { OutputTargetType } from "../outputTargetType";
+import type { IOutputTargetFactory } from "./base";
 
 export default class MockOutputTargetFactory implements IOutputTargetFactory {
 	getDownloadOutputTarget(): OutputTargetType<void> {

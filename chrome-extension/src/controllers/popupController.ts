@@ -1,5 +1,5 @@
-import type { LocalStorage, LocalStorageType } from "../adapters/localStorage";
 import type { IBackgroundWorker } from "../adapters/backgroundWorker/base";
+import type { LocalStorage, LocalStorageType } from "../adapters/localStorage";
 
 export class PopupController {
 	constructor(
@@ -8,10 +8,14 @@ export class PopupController {
 		progressesListener: (progress: LocalStorageType["progresses"]) => void,
 	) {
 		this.localStorage.addProgressesListener(progressesListener);
-		this.localStorage
-			.validateRawLocalStorage()
-			.then(() => this.checkProgressesAndBackgroundWorkerConsistency())
-			.catch((e) => console.error(e));
+		(async () => {
+			try {
+				await this.localStorage.validateRawLocalStorage();
+				await this.checkProgressesAndBackgroundWorkerConsistency();
+			} catch (e) {
+				console.error(e);
+			}
+		})();
 	}
 
 	async getLocalStorageProgresses() {
@@ -21,6 +25,7 @@ export class PopupController {
 	async fetchAndOutputData() {
 		await this.backgroundWorker.fetchAndOutput();
 	}
+
 	/**
 	 * ローカルストレージのprogressesとbackgroundWorkerの稼働状況の一貫性を確認し、矛盾する場合エラーメッセージを最後に追加する
 	 */

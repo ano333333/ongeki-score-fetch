@@ -1,12 +1,12 @@
-import type { UserDataScoreType } from "../adapters/userDataSource/base";
 import type {
 	BeatmapDataDifficultyType,
 	BeatmapDataType,
 } from "../adapters/beatmapDataSource/base";
-import type { OutputTargetDataRowType } from "../adapters/outputTargetType";
-import type { ChrExtRuntimeMessageType } from "../messages";
-import { OngekiMypageUserDataSource } from "../adapters/userDataSource/ongekiMypageUserDataSource";
 import { GcsBeatmapDataSource } from "../adapters/beatmapDataSource/gcsBeatmapDataSource";
+import type { OutputTargetDataRowType } from "../adapters/outputTargetType";
+import type { UserDataScoreType } from "../adapters/userDataSource/base";
+import { OngekiMypageUserDataSource } from "../adapters/userDataSource/ongekiMypageUserDataSource";
+import type { ChrExtRuntimeMessageType } from "../messages";
 
 console.log("start offscreenDataFetch.ts");
 
@@ -23,7 +23,9 @@ const fetch = async () => {
 	console.log("offscreenDataFetch.ts: fetch");
 	try {
 		const userDataSource = new OngekiMypageUserDataSource();
-		const beatmapDataSource = new GcsBeatmapDataSource(import.meta.env.VITE_BEATMAP_DATA_BUCKET_URL);
+		const beatmapDataSource = new GcsBeatmapDataSource(
+			import.meta.env.VITE_BEATMAP_DATA_BUCKET_URL,
+		);
 
 		const logger = async (log: string) => {
 			console.log(`offscreenDataFetch.ts: ${log}`);
@@ -39,7 +41,7 @@ const fetch = async () => {
 		let userDatas: UserDataScoreType[] = [];
 		try {
 			userDatas = await userDataSource.getUserData(logger);
-		} catch (e) {
+		} catch (_e) {
 			throw "ユーザーデータ取得中にエラーが発生しました。再ログインしてください。";
 		}
 		const beatmapDatas = await beatmapDataSource.getBeatmapData(logger);

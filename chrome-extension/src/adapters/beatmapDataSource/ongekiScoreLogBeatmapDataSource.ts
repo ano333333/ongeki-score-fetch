@@ -1,9 +1,9 @@
+import Papa from "papaparse";
 import type {
 	BeatmapDataDifficultyType,
 	BeatmapDataType,
 	IBeatmapDataSource,
 } from "./base";
-import Papa from "papaparse";
 
 export class OngekiScoreLogBeatmapDataSource implements IBeatmapDataSource {
 	async getBeatmapData(
@@ -14,7 +14,7 @@ export class OngekiScoreLogBeatmapDataSource implements IBeatmapDataSource {
 		const response = await fetch(import.meta.env.VITE_BEATMAP_DATA_SOURCE_URL);
 		const rawDatas = await response.text();
 		const csv = await this.parse(rawDatas);
-		const beatmapDatas = new Array<BeatmapDataType>();
+		const beatmapDatas: BeatmapDataType[] = [];
 		for (const row of csv) {
 			const createRow = (
 				row: string[],

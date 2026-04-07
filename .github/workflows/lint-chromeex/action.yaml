@@ -26,7 +26,7 @@ runs:
           working-directory: ./chrome-extension
           shell: bash
           run: |
-              npm ci
+              pnpm install --frozen-lockfile
 
         - name: Run Prettier check
           id: prettier

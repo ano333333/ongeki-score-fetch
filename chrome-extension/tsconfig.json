@@ -20,7 +20,7 @@
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
 
-		"types": ["@vitest/browser/providers/playwright", "chrome"]
+		"types": ["chrome"]
 	},
 	"include": [
 		"src/**/*.ts",

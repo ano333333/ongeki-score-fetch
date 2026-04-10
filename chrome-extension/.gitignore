@@ -23,6 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
+# playwright
+playwright-report
+test-results
+
 package-lock.json
 
 .env

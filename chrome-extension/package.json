@@ -9,6 +9,7 @@
         "build": "vue-tsc && vite build",
         "preview": "vite preview",
         "test": "vitest",
+        "test:e2e": "pnpm build && playwright test",
         "test:ci": "vitest",
         "format": "prettier --write . && biome format --write",
         "lint": "biome lint --write"

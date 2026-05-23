@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test as base, chromium, type BrowserContext } from "@playwright/test";
@@ -5,10 +6,13 @@ import { test as base, chromium, type BrowserContext } from "@playwright/test";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// `chrome.downloads.download`によるダウンロードのため、CSVダウンロードの内容確認のために一時ファイル書き出しが必要
+export const e2eDownloadDir = path.join(
+	os.tmpdir(),
+	"ongeki-score-fetch-e2e-browser-downloads",
+);
+
 const executablePath = process.env.PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH;
-if (!executablePath) {
-	throw new Error("PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH is not set");
-}
 
 export const test = base.extend<{
 	context: BrowserContext;
@@ -23,7 +27,9 @@ export const test = base.extend<{
 		// ビルド済みのChrome拡張機能のパスを指定
 		const pathToExtension = path.join(__dirname, "../../dist");
 		const context = await chromium.launchPersistentContext("", {
-			executablePath,
+			acceptDownloads: true,
+			downloadsPath: e2eDownloadDir,
+			...(executablePath ? { executablePath } : {}),
 			args: [
 				`--disable-extensions-except=${pathToExtension}`,
 				`--load-extension=${pathToExtension}`,
@@ -39,7 +45,7 @@ export const test = base.extend<{
 			background = await context.waitForEvent("serviceworker");
 		}
 
-		const extensionId = background.url().split("/")[2];
+		const extensionId = new URL(background.url()).hostname;
 		await use(extensionId);
 	},
 	extensionUrl: async ({ extensionId }, use) => {

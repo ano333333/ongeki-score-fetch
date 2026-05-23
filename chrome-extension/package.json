@@ -10,6 +10,7 @@
         "preview": "vite preview",
         "test": "vitest",
         "test:e2e": "pnpm build && playwright test",
+        "test:e2e:ui": "pnpm build && playwright test --ui-host 127.0.0.1 --ui-port 9330",
         "test:ci": "vitest",
         "format": "prettier --write . && biome format --write",
         "lint": "biome lint --write"

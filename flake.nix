@@ -24,7 +24,7 @@
           default = pkgs.mkShell {
             packages = with pkgs; [
               nodejs_24
-              nodePackages.pnpm
+              pnpm
               playwright-driver.browsers
 
               terraform

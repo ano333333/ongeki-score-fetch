@@ -20,15 +20,14 @@
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
 
-		"types": ["@vitest/browser/providers/playwright", "chrome"]
+		"types": ["chrome"]
 	},
 	"include": [
 		"src/**/*.ts",
 		"src/**/*.d.ts",
 		"src/**/*.tsx",
 		"src/**/*.vue",
-		"vite-env.d.ts",
-		"tests/**/*.test.ts"
+		"vite-env.d.ts"
 	],
 	"references": [{ "path": "./tsconfig.node.json" }]
 }

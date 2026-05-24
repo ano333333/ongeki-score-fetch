@@ -9,6 +9,8 @@
         "build": "vue-tsc && vite build",
         "preview": "vite preview",
         "test": "vitest",
+        "test:e2e": "pnpm build && playwright test",
+        "test:e2e:ui": "pnpm build && playwright test --ui-host 127.0.0.1 --ui-port 9330",
         "test:ci": "vitest",
         "format": "prettier --write . && biome format --write",
         "lint": "biome lint --write"
@@ -26,8 +28,8 @@
         "@types/jsdom": "^21.1.4",
         "@types/papaparse": "^5.3.15",
         "@vitejs/plugin-vue": "^4.2.3",
-        "@vitest/browser": "^3.1.4",
         "autoprefixer": "^10.4.16",
+        "dotenv": "^17.4.2",
         "postcss": "^8.4.31",
         "tailwindcss": "^3.3.3",
         "typescript": "^5.0.2",

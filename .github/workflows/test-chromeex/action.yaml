@@ -27,7 +27,7 @@ runs:
           working-directory: ./chrome-extension
           shell: bash
           run: |
-              npm install
+              pnpm install --frozen-lockfile
 
         - name: Test
           id: test
@@ -35,7 +35,7 @@ runs:
           shell: bash
           continue-on-error: true
           run: |
-              npm run test:ci
+              pnpm run test:ci
 
         - name: Set result
           id: set-result

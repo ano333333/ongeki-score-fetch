@@ -26,7 +26,7 @@ GitHub Actionsの実行時間短縮を目的として、Node.jsとPlaywrightが�
 **基盤**: Ubuntu 24.04 LTS  
 **Node.js**: v24 (flake.nixの`nodejs_24`に準拠)  
 **追加パッケージ**: curl, unzip, git, google-cloud-cli（gcloud / gsutil）
-**パッケージ管理**: pnpm 10.10.0（corepack経由）
+**パッケージ管理**: pnpm（corepack経由）
 
 **用途**:
 
@@ -39,13 +39,13 @@ GitHub Actionsの実行時間短縮を目的として、Node.jsとPlaywrightが�
 **Node.js**: v24 (flake.nixの`nodejs_24`に準拠)  
 **Playwright**: プリインストール（ブラウザ込み）  
 **追加パッケージ**: curl, git  
-**パッケージ管理**: pnpm 10.10.0（corepack経由）
+**パッケージ管理**: pnpm（corepack経由）
 
 **特徴**:
 
 - Playwright関連依存関係を事前インストール
 - ブラウザバイナリ（Chromium）を含有
-- `npx playwright install --with-deps`実行済み
+- `pnpm exec playwright install --with-deps`実行済み
 
 **用途**:
 
@@ -62,12 +62,11 @@ GitHub Actionsの実行時間短縮を目的として、Node.jsとPlaywrightが�
 
 ```bash
 # Node.jsイメージのビルド
-cd .github/workflows/images
-docker build -f Dockerfile.node -t ghcr.io/ano333333/ongeki-score-fetch/node:24.04 .
+docker build -f .github/workflows/images/Dockerfile.node -t ghcr.io/ano333333/ongeki-score-fetch/node:24.04 .
 docker push ghcr.io/ano333333/ongeki-score-fetch/node:24.04
 
 # Playwrightイメージのビルド
-docker build -f Dockerfile.playwright -t ghcr.io/ano333333/ongeki-score-fetch/playwright:24.04 .
+docker build -f .github/workflows/images/Dockerfile.playwright -t ghcr.io/ano333333/ongeki-score-fetch/playwright:24.04 .
 docker push ghcr.io/ano333333/ongeki-score-fetch/playwright:24.04
 ```
 

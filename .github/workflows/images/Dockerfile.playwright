@@ -20,27 +20,18 @@ RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
 # Playwright環境変数の設定
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# 最小限のNodeプロジェクトを作成
+# chrome-extension の依存関係を使って Playwright をインストール
 WORKDIR /opt/playwright-project
 
-# package.jsonを作成
-RUN echo '{\
-  "name": "playwright-container",\
-  "version": "1.0.0",\
-  "type": "module",\
-  "devDependencies": {\
-    "@vitest/browser": "^3.1.4",\
-    "playwright": "^1.52.0",\
-    "vitest": "^3.1.4",\
-    "vitest-browser-vue": "^0.2.0"\
-  }\
-}' > package.json
+COPY chrome-extension/package.json ./
+COPY chrome-extension/pnpm-lock.yaml ./
+COPY chrome-extension/pnpm-workspace.yaml ./
 
 # 依存関係のインストール
-RUN npm install
+RUN pnpm install --frozen-lockfile
 
 # Playwrightブラウザのインストール（chromiumを明示的に指定）
-RUN npx playwright install chromium --with-deps
+RUN pnpm exec playwright install chromium --with-deps
 
 # プロジェクトディレクトリを削除（ブラウザはグローバルにインストール済み）
 RUN rm -rf /opt/playwright-project

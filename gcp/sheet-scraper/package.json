@@ -4,7 +4,7 @@
     "description": "",
     "main": "codes/index.js",
     "scripts": {
-        "build": "npx tsc",
+        "build": "tsc",
         "dev": "node --env-file .env -r ts-node/register codes/index.ts",
         "test": "jest"
     },
@@ -13,7 +13,7 @@
             "nodeVersion": "22.15.0"
         }
     },
-    "packageManager": "pnpm@10.10.0",
+    "packageManager": "pnpm@11.1.2",
     "author": "",
     "license": "ISC",
     "devDependencies": {

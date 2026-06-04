@@ -9,7 +9,7 @@ import {
 	WORKFLOW_ID,
 	REVIEWS_DIR,
 } from "./constants.ts";
-import { createCommitHandler, createPrHandler, createPrMonitorHandler } from "./handlers/commit-pr.ts";
+import { createCommitHandler, createPrHandler, createPrMonitorHandler, createPrMonitorWaitHandler } from "./handlers/commit-pr.ts";
 import { createQueuedUserMessageHandler } from "./handlers/prompt-user-message.ts";
 import { createReviewHandler } from "./handlers/review.ts";
 import { createSelectIssueHandler } from "./handlers/select-issue.ts";
@@ -97,6 +97,10 @@ export default function githubIssueDrivenDevExtension(pi: ExtensionAPI): void {
 		registerHandler({
 			name: "githubIssueDrivenDev.monitorPr",
 			handler: createPrMonitorHandler(repoRoot, activeDir),
+		});
+		registerHandler({
+			name: "githubIssueDrivenDev.waitPrMonitor",
+			handler: createPrMonitorWaitHandler(pi, repoRoot),
 		});
 		pi.events.emit(REGISTER_WORKFLOW_EVENT, workflowDefinition);
 	};

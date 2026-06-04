@@ -4,7 +4,7 @@ import { createPrHandler, createPrMonitorHandler, createPrMonitorWaitHandler } f
 import { ensureDir, readTextIfExists, writeText } from "./io.ts";
 import { loadMeta, saveMeta } from "./meta.ts";
 import { runDelegatedAgent } from "./subagent.ts";
-import { runGhJson } from "./command.ts";
+import { runCommand, runGhJson } from "./command.ts";
 
 vi.mock("./subagent.ts", () => ({
 	runDelegatedAgent: vi.fn(),
@@ -42,25 +42,53 @@ describe("commit/pr handlers", () => {
 	const readTextIfExistsMock = vi.mocked(readTextIfExists);
 	const runDelegatedAgentMock = vi.mocked(runDelegatedAgent);
 	const runGhJsonMock = vi.mocked(runGhJson);
+	const runCommandMock = vi.mocked(runCommand);
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	it("skips PR creation when metadata already has a PR URL", async () => {
+	it("pushes the current branch when metadata already has a PR URL", async () => {
 		loadMetaMock.mockResolvedValue({ prUrl: "https://github.com/owner/repo/pull/123" });
+		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "feature/test\n", stderr: "" });
+		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "", stderr: "" });
 
 		const handler = createPrHandler(repoRoot, activeDir);
 		await expect(handler()).resolves.toEqual({
 			prPath: ".pi/workflows/github-issue-driven-dev/current/PR.md",
 			prUrl: "https://github.com/owner/repo/pull/123",
 			skipped: true,
+			pushedBranch: "feature/test",
 		});
 		expect(runDelegatedAgentMock).not.toHaveBeenCalled();
+		expect(runCommandMock).toHaveBeenNthCalledWith(1, "git branch --show-current", repoRoot);
+		expect(runCommandMock).toHaveBeenNthCalledWith(2, "git push", repoRoot);
 		expect(saveMetaMock).toHaveBeenCalledWith(
 			repoRoot,
-			expect.objectContaining({ prUrl: "https://github.com/owner/repo/pull/123", prAgent: "issue-pr-author" }),
+			expect.objectContaining({
+				prUrl: "https://github.com/owner/repo/pull/123",
+				prAgent: "issue-pr-author",
+				prPushedBranch: "feature/test",
+			}),
 		);
+	});
+
+	it("pushes the current branch when gh detects an existing PR", async () => {
+		loadMetaMock.mockResolvedValue({});
+		runGhJsonMock.mockResolvedValueOnce({ url: "https://github.com/owner/repo/pull/123" });
+		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "feature/existing\n", stderr: "" });
+		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "", stderr: "" });
+
+		const handler = createPrHandler(repoRoot, activeDir);
+		await expect(handler()).resolves.toEqual({
+			prPath: ".pi/workflows/github-issue-driven-dev/current/PR.md",
+			prUrl: "https://github.com/owner/repo/pull/123",
+			skipped: true,
+			pushedBranch: "feature/existing",
+		});
+		expect(runGhJsonMock).toHaveBeenCalledWith(["pr", "view", "--json", "url"], repoRoot);
+		expect(runCommandMock).toHaveBeenNthCalledWith(1, "git branch --show-current", repoRoot);
+		expect(runCommandMock).toHaveBeenNthCalledWith(2, "git push", repoRoot);
 	});
 
 	it("stores pending monitor output and asks the wait state to retry", async () => {

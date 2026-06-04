@@ -9,7 +9,7 @@ import {
 	PR_PATH,
 	REVIEW_FILE_PATH,
 } from "../constants.ts";
-import { runGhJson } from "../command.ts";
+import { runCommand, runGhJson } from "../command.ts";
 import { ensureDir, readTextIfExists, writeText } from "../io.ts";
 import { loadMeta, saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
@@ -134,6 +134,23 @@ function createPrMonitorMarkdown(pr: PullRequestView, checks: PrCheck[], nextAct
 	].join("\n");
 }
 
+async function pushCurrentBranch(repoRoot: string): Promise<string> {
+	const branchResult = await runCommand("git branch --show-current", repoRoot);
+	const branch = branchResult.stdout.trim();
+	if (branchResult.exitCode !== 0 || !branch) {
+		throw new Error(branchResult.stderr || "failed to determine current branch for push");
+	}
+
+	const pushResult = await runCommand("git push", repoRoot);
+	if (pushResult.exitCode === 0) return branch;
+
+	const fallbackResult = await runCommand(`git push --set-upstream origin ${JSON.stringify(branch)}`, repoRoot);
+	if (fallbackResult.exitCode !== 0) {
+		throw new Error(fallbackResult.stderr || pushResult.stderr || `failed to push branch ${branch}`);
+	}
+	return branch;
+}
+
 async function appendRejectedReviewFromPr(repoRoot: string, pr: PullRequestView): Promise<void> {
 	const reviewFilePath = repoPath(repoRoot, REVIEW_FILE_PATH);
 	await ensureDir(repoPath(repoRoot, REVIEW_FILE_PATH.split("/").slice(0, -1).join("/")));
@@ -182,25 +199,37 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 		const meta = await loadMeta(repoRoot);
 		const existingMetaUrl = typeof meta.prUrl === "string" && meta.prUrl ? meta.prUrl : null;
 		if (existingMetaUrl) {
-			await writeText(repoPath(repoRoot, PR_PATH), `PR_URL: ${existingMetaUrl}\n\n既存の PR を metadata から再利用しました。\n`);
+			const pushedBranch = await pushCurrentBranch(repoRoot);
+			await writeText(
+				repoPath(repoRoot, PR_PATH),
+				`PR_URL: ${existingMetaUrl}\n\n既存の PR を metadata から再利用し、branch ${pushedBranch} を push しました。\n`,
+			);
 			await saveMeta(repoRoot, {
 				prUrl: existingMetaUrl,
 				prSkippedAt: new Date().toISOString(),
+				prPushedAt: new Date().toISOString(),
+				prPushedBranch: pushedBranch,
 				prAgent: DEFAULT_CONFIG.prAgent,
 			});
-			return { prPath: PR_PATH, prUrl: existingMetaUrl, skipped: true };
+			return { prPath: PR_PATH, prUrl: existingMetaUrl, skipped: true, pushedBranch };
 		}
 
 		try {
 			const existingPr = await runGhJson<{ url: string }>(["pr", "view", "--json", "url"], repoRoot);
 			if (existingPr.url) {
-				await writeText(repoPath(repoRoot, PR_PATH), `PR_URL: ${existingPr.url}\n\n既存の PR を再利用しました。\n`);
+				const pushedBranch = await pushCurrentBranch(repoRoot);
+				await writeText(
+					repoPath(repoRoot, PR_PATH),
+					`PR_URL: ${existingPr.url}\n\n既存の PR を再利用し、branch ${pushedBranch} を push しました。\n`,
+				);
 				await saveMeta(repoRoot, {
 					prUrl: existingPr.url,
 					prSkippedAt: new Date().toISOString(),
+					prPushedAt: new Date().toISOString(),
+					prPushedBranch: pushedBranch,
 					prAgent: DEFAULT_CONFIG.prAgent,
 				});
-				return { prPath: PR_PATH, prUrl: existingPr.url, skipped: true };
+				return { prPath: PR_PATH, prUrl: existingPr.url, skipped: true, pushedBranch };
 			}
 		} catch {
 			// no existing PR for this branch; create one below

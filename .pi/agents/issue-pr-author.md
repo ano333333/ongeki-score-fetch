@@ -15,6 +15,7 @@ bash は読み取り専用の git 調査と `gh pr create` の実行に使って
 - issue、plan、review 履歴、commit summary から PR title / body を組み立てること。
 - 実際に `gh pr create` を実行すること。
 - すでに PR が存在する場合は重複作成せず、その事実を報告すること。
+- 既存 PR の再利用時に handler 側で push が実行される前提なので、重複して commit や source 編集はしないこと。
 
 最終出力ルール:
 - PR が既存または新規作成済みなら、1 行目を `PR_URL: <url>` にすること。

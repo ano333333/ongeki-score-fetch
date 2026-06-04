@@ -112,9 +112,18 @@ export const workflowDefinition: ClientWorkflowDefinition = {
 		},
 		"monitor-pr": {
 			id: "monitor-pr",
-			title: "Monitor PR",
+			title: "PR Status Check",
 			action: { kind: "function", handler: "githubIssueDrivenDev.monitorPr" },
-			transitions: [],
+			transitions: [
+				{ id: "to-address-review-from-pr-monitor", to: "address-review", trigger: "error" },
+				{ id: "to-wait-pr-monitor", to: "wait-pr-monitor", trigger: "success" },
+			],
+		},
+		"wait-pr-monitor": {
+			id: "wait-pr-monitor",
+			title: "PR Status Wait",
+			action: { kind: "function", handler: "githubIssueDrivenDev.waitPrMonitor" },
+			transitions: [{ id: "retry-monitor-pr", to: "monitor-pr", trigger: "error" }],
 		},
 	},
 };

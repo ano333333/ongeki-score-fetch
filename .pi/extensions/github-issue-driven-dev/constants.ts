@@ -15,6 +15,7 @@ export const COMMITS_PATH = `${ACTIVE_RUN_DIR}/COMMITS.md`;
 export const PR_PATH = `${ACTIVE_RUN_DIR}/PR.md`;
 export const PR_MONITOR_PATH = `${ACTIVE_RUN_DIR}/PR_MONITOR.md`;
 export const META_PATH = `${ACTIVE_RUN_DIR}/meta.json`;
+export const PR_MONITOR_WAIT_MS = 3 * 60 * 1000;
 export const REVIEWS_DIR = `${ACTIVE_RUN_DIR}/reviews`;
 export const REVIEW_FILE_PATH = `${REVIEWS_DIR}/review.md`;
 export const ISSUE_CANDIDATES_PATH = `${ACTIVE_RUN_DIR}/ISSUES.md`;

@@ -8,6 +8,13 @@ function countReviewRounds(reviewHistory: string): number {
 	return (reviewHistory.match(/^## Review Round /gm) ?? []).length;
 }
 
+function detectLatestReviewDisposition(reviewText: string): "ACCEPTED" | "REJECTED" | "UNKNOWN" {
+	const matches = Array.from(reviewText.matchAll(/REVIEW:\s*(ACCEPTED|REJECTED)/gim));
+	const last = matches.at(-1)?.[1]?.toUpperCase();
+	if (last === "ACCEPTED" || last === "REJECTED") return last;
+	return "UNKNOWN";
+}
+
 export function createReviewHandler(repoRoot: string, activeDir: string, reviewsDir: string) {
 	return async () => {
 		await ensureDir(reviewsDir);
@@ -36,15 +43,14 @@ export function createReviewHandler(repoRoot: string, activeDir: string, reviews
 			? `${reviewHistory.trimEnd()}\n\n## Review Round ${reviewRound}\n\n${reviewText.trimEnd()}\n`
 			: `# Review History\n\n## Review Round ${reviewRound}\n\n${reviewText.trimEnd()}\n`;
 		await writeText(reviewFilePath, reviewEntry);
-		const accepted = /^REVIEW:\s*ACCEPTED/im.test(reviewText);
-		const rejected = /^REVIEW:\s*REJECTED/im.test(reviewText);
+		const disposition = detectLatestReviewDisposition(reviewText);
 		await saveMeta(repoRoot, {
 			latestReviewFile: REVIEW_FILE_PATH,
-			latestReviewDisposition: accepted ? "ACCEPTED" : rejected ? "REJECTED" : "UNKNOWN",
+			latestReviewDisposition: disposition,
 			reviewAgent: DEFAULT_CONFIG.reviewAgent,
 			reviewUpdatedAt: new Date().toISOString(),
 		});
-		if (!accepted) throw new Error(`review rejected: see ${REVIEW_FILE_PATH}`);
+		if (disposition !== "ACCEPTED") throw new Error(`review rejected: see ${REVIEW_FILE_PATH}`);
 		return { reviewFile: REVIEW_FILE_PATH };
 	};
 }

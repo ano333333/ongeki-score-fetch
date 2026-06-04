@@ -39,6 +39,22 @@ export default function githubIssueDrivenDevExtension(pi: ExtensionAPI): void {
 			handler: createFormatterHandler(repoRoot),
 		});
 		registerHandler({
+			name: "githubIssueDrivenDev.promptImplement",
+			handler: createQueuedUserMessageHandler(
+				pi,
+				[
+					"GitHub issue driven dev workflow: 実装フェーズです。",
+					".pi/workflows/github-issue-driven-dev/current/ISSUE.md と .pi/workflows/github-issue-driven-dev/current/PLAN.md を読んでください。",
+					"このフローは追加の skill ではなく、pi + state-workflow の state と handler を中心に進みます。",
+					"選ばれた issue に必要な範囲だけ実装してください。",
+					"必要に応じてファイル調査、コード編集、コマンド実行を行って構いません。",
+					"重要な判断があれば、セッションに有用な reasoning を残してください。",
+					"レビュー通過後は PR 作成に加えて .pi/workflows/github-issue-driven-dev/current/PR_MONITOR.md へ GitHub Actions / CodeRabbit の監視結果も残る前提で進めてください。",
+					"実装が完了したら workflow_next tool を transitionId: to-run-formatter で呼び、formatter 実行へ進んでください。",
+				].join("\n"),
+			),
+		});
+		registerHandler({
 			name: "githubIssueDrivenDev.runLinter",
 			handler: createLinterHandler(repoRoot),
 		});

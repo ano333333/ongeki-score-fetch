@@ -83,8 +83,10 @@ stateDiagram-v2
 - ここではまだ実装しない
 
 ### 3. `implement`
-- agent が `ISSUE.md` と `PLAN.md` を読み、必要な範囲だけ実装する
-- 完了後は `workflow_next` で formatter へ進む
+- function handler が **follow-up user message** として実装指示を送信し、その後 workflow は agent / manual の遷移待ちに入る
+- これは base extension の素の `userMessage` action ではなく、follow-up 配信を使って agent が同じセッション内で `workflow_next` を呼べるようにするための実装
+- agent は `ISSUE.md` と `PLAN.md` を読み、必要な範囲だけ実装する
+- 完了後は `workflow_next` で formatter へ進み、base extension 側が `run-formatter -> run-linter -> run-test -> review` を自動連鎖実行する
 
 ### 4. `run-formatter`
 - formatter を実行する

@@ -67,14 +67,14 @@ describe("github-issue-driven-dev verification workflow", () => {
 	});
 
 	it("implement exposes an agent-selectable transition to run-formatter", () => {
-		const transition = workflowDefinition.states.implement.transitions.find((item) => item.id === "to-run-formatter");
+		const state = workflowDefinition.states.implement;
+		const transition = state.transitions.find((item) => item.id === "to-run-formatter");
 		expect(transition?.trigger).toBe("manualOrAgent");
-		expect(workflowDefinition.states.implement.action.kind).toBe("userMessage");
-		if (workflowDefinition.states.implement.action.kind !== "userMessage") {
-			throw new Error("implement action should be a userMessage");
+		expect(state.action.kind).toBe("function");
+		if (state.action.kind !== "function") {
+			throw new Error("implement action should be a function");
 		}
-		expect(workflowDefinition.states.implement.action.content).toContain("workflow_next tool");
-		expect(workflowDefinition.states.implement.action.content).toContain("transitionId: to-run-formatter");
+		expect(state.action.handler).toBe("githubIssueDrivenDev.promptImplement");
 	});
 
 	it("run-formatter streams stdout and stderr progress", async () => {

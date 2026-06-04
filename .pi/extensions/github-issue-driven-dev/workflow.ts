@@ -32,19 +32,7 @@ export const workflowDefinition: ClientWorkflowDefinition = {
 		implement: {
 			id: "implement",
 			title: "Implement",
-			action: {
-				kind: "userMessage",
-				content: [
-					"GitHub issue driven dev workflow: 実装フェーズです。",
-					`${ISSUE_PATH} と ${PLAN_PATH} を読んでください。`,
-					"このフローは追加の skill ではなく、pi + state-workflow の state と handler を中心に進みます。",
-					"選ばれた issue に必要な範囲だけ実装してください。",
-					"必要に応じてファイル調査、コード編集、コマンド実行を行って構いません。",
-					"重要な判断があれば、セッションに有用な reasoning を残してください。",
-					`レビュー通過後は PR 作成に加えて ${PR_MONITOR_PATH} へ GitHub Actions / CodeRabbit の監視結果も残る前提で進めてください。`,
-					"実装が完了したら workflow_next tool を transitionId: to-run-formatter で呼び、formatter 実行へ進んでください。",
-				].join("\n"),
-			},
+			action: { kind: "function", handler: "githubIssueDrivenDev.promptImplement" },
 			transitions: [{ id: "to-run-formatter", to: "run-formatter", trigger: "manualOrAgent", label: "run formatter" }],
 		},
 		"run-formatter": {

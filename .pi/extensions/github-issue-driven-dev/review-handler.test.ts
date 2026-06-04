@@ -64,17 +64,14 @@ describe("createReviewHandler", () => {
 		);
 	});
 
-	it("appends later reviews to the same file and rejects on REVIEW: REJECTED", async () => {
-		readTextIfExistsMock.mockResolvedValue("# Review History\n\n## Review Round 1\n\nREVIEW: REJECTED\n");
-		runDelegatedAgentMock.mockResolvedValue("REVIEW: REJECTED\n\n## Critical\n- fix review flow\n");
+	it("uses the last REVIEW disposition when the reviewer mentions multiple REVIEW lines", async () => {
+		readTextIfExistsMock.mockResolvedValue("# Review History\n\n## Review Round 1\n\nREVIEW: ACCEPTED\n");
+		runDelegatedAgentMock.mockResolvedValue("REVIEW: ACCEPTED\n\n## Critical\n- quoted old status: REVIEW: ACCEPTED\n\nREVIEW: REJECTED\n");
 
 		const handler = createReviewHandler(repoRoot, activeDir, reviewsDir);
 		await expect(handler()).rejects.toThrow(`review rejected: see ${REVIEW_FILE_PATH}`);
 
-		expect(writeTextMock).toHaveBeenCalledWith(
-			expect.stringContaining(REVIEW_FILE_PATH),
-			expect.stringContaining("## Review Round 2\n\nREVIEW: REJECTED"),
-		);
+		expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining(REVIEW_FILE_PATH), expect.stringContaining("## Review Round 2"));
 		expect(saveMetaMock).toHaveBeenCalledWith(
 			repoRoot,
 			expect.objectContaining({

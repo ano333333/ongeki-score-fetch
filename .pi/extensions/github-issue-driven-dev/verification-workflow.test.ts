@@ -178,4 +178,18 @@ describe("github-issue-driven-dev verification workflow", () => {
 	it("create-pr success advances to monitor-pr", () => {
 		expect(nextStateForResult("create-pr", true)).toBe("monitor-pr");
 	});
+
+	it("monitor-pr success advances to wait-pr-monitor and failure routes to address-review", () => {
+		expect(nextStateForResult("monitor-pr", true)).toBe("wait-pr-monitor");
+		expect(nextStateForResult("monitor-pr", false)).toBe("address-review");
+	});
+
+	it("wait-pr-monitor retries monitor-pr on error and otherwise terminates", () => {
+		expect(nextStateForResult("wait-pr-monitor", false)).toBe("monitor-pr");
+		expect(nextStateForResult("wait-pr-monitor", true)).toBeNull();
+		const state = workflowDefinition.states["wait-pr-monitor"];
+		expect(state.action.kind).toBe("function");
+		if (state.action.kind !== "function") throw new Error("wait-pr-monitor action should be a function");
+		expect(state.action.handler).toBe("githubIssueDrivenDev.waitPrMonitor");
+	});
 });

@@ -156,6 +156,7 @@ describe("commit/pr handlers", () => {
 			prPendingCommentFingerprint: "[]",
 		});
 		readTextIfExistsMock.mockResolvedValue("# Review History\n\n## Review Round 1\n\nREVIEW: ACCEPTED\n\n## Summary\n- fixed\n");
+		runDelegatedAgentMock.mockResolvedValue("PR_MONITOR_DECISION: USER_CONFIRM\nCOMMENT_REPLY_NEEDED: yes\nNOTE: 返信のみで十分です。");
 		runGhJsonMock
 			.mockResolvedValueOnce({
 				url: "https://github.com/owner/repo/pull/123",
@@ -187,6 +188,13 @@ describe("commit/pr handlers", () => {
 			repoRoot,
 		);
 		expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining(PR_MONITOR_PATH), expect.stringContaining("返信しました"));
+		expect(saveMetaMock).toHaveBeenCalledWith(
+			repoRoot,
+			expect.objectContaining({
+				prMonitorNextAction: "USER_CONFIRM",
+				prPendingCommentFingerprint: expect.stringContaining("please explain the fix"),
+			}),
+		);
 	});
 
 	it("appends a rejected review when non-bot review feedback changed after workflow completion", async () => {
@@ -195,6 +203,9 @@ describe("commit/pr handlers", () => {
 			prPendingCommentFingerprint: "[]",
 		});
 		readTextIfExistsMock.mockResolvedValue("# Review History\n\n## Review Round 1\n\nREVIEW: ACCEPTED\n");
+		runDelegatedAgentMock.mockResolvedValue(
+			"PR_MONITOR_DECISION: REVIEW_REJECTED\nCOMMENT_REPLY_NEEDED: no\nNOTE: 新しい review 指摘があり再実装が必要です。",
+		);
 		runGhJsonMock
 			.mockResolvedValueOnce({
 				url: "https://github.com/owner/repo/pull/123",
@@ -276,6 +287,80 @@ describe("commit/pr handlers", () => {
 				prMonitorNextAction: "COMPLETED",
 			}),
 		);
+	});
+
+	it("stores the current fingerprint when checks complete without additional replies", async () => {
+		loadMetaMock.mockResolvedValue({
+			prUrl: "https://github.com/owner/repo/pull/123",
+			prPendingCommentFingerprint: "[]",
+		});
+		runGhJsonMock
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "OPEN",
+				updatedAt: "2026-06-04T18:10:00Z",
+				comments: [],
+				reviews: [],
+			})
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({ login: "ano333333" });
+
+		const handler = createPrMonitorHandler(repoRoot, activeDir);
+		await expect(handler()).resolves.toEqual({
+			prMonitorPath: PR_MONITOR_PATH,
+			disposition: "OK",
+			nextAction: "USER_CONFIRM",
+			prUrl: "https://github.com/owner/repo/pull/123",
+		});
+		expect(saveMetaMock).toHaveBeenCalledWith(
+			repoRoot,
+			expect.objectContaining({
+				prMonitorNextAction: "USER_CONFIRM",
+				prPendingCommentFingerprint: "[]",
+			}),
+		);
+	});
+
+	it("uses delegated natural-language judgement to ignore non-actionable comment changes", async () => {
+		loadMetaMock.mockResolvedValue({
+			prUrl: "https://github.com/owner/repo/pull/123",
+			prPendingCommentFingerprint: "[]",
+		});
+		readTextIfExistsMock.mockResolvedValue("# Review History\n\n## Review Round 1\n\nREVIEW: ACCEPTED\n");
+		runDelegatedAgentMock.mockResolvedValue(
+			"PR_MONITOR_DECISION: USER_CONFIRM\nCOMMENT_REPLY_NEEDED: no\nNOTE: 情報共有のみで追加実装は不要です。",
+		);
+		runGhJsonMock
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "OPEN",
+				updatedAt: "2026-06-04T18:10:00Z",
+				comments: [
+					{
+						author: { login: "teammate" },
+						body: "looks good to me",
+						updatedAt: "2026-06-04T18:09:00Z",
+						url: "https://github.com/comment/2",
+					},
+				],
+				reviews: [],
+			})
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({ login: "ano333333" });
+
+		const handler = createPrMonitorHandler(repoRoot, activeDir);
+		await expect(handler()).resolves.toEqual({
+			prMonitorPath: PR_MONITOR_PATH,
+			disposition: "OK",
+			nextAction: "USER_CONFIRM",
+			prUrl: "https://github.com/owner/repo/pull/123",
+		});
+		expect(runDelegatedAgentMock).toHaveBeenCalledWith(
+			repoRoot,
+			"issue-pr-monitor",
+			expect.stringContaining("今回新たに観測した PR feedback"),
+		);
+		expect(runCommandMock).not.toHaveBeenCalled();
 	});
 
 	it("wait handler notifies user when PR is merged", async () => {

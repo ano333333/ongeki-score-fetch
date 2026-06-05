@@ -298,14 +298,58 @@ function collectAutoReplyTargets(pr: PullRequestView, previousItems: Fingerprint
 	});
 }
 
-function hasUnhandledReviewFeedback(changedItems: FingerprintItem[], autoReplyTargets: FingerprintItem[], viewerLogin: string): boolean {
-	const autoReplyKeys = new Set(autoReplyTargets.map((item) => JSON.stringify(item)));
-	return changedItems.some((item) => {
-		if (item.author === viewerLogin) return false;
-		if (item.kind === "review") return true;
-		if (item.kind === "comment") return !autoReplyKeys.has(JSON.stringify(item));
-		return false;
-	});
+function summarizeFingerprintItems(items: FingerprintItem[]): string {
+	if (items.length === 0) return "- none";
+	return items
+		.map((item) => {
+			const state = item.kind === "review" && item.state ? `:${item.state}` : "";
+			const body = item.body.trim() || "<empty>";
+			return `- [${item.kind}${state}] ${item.author || "unknown"} @ ${item.url || item.updatedAt || "<unknown>"}: ${body}`;
+		})
+		.join("\n");
+}
+
+async function judgePrFeedbackWithAgent(
+	repoRoot: string,
+	activeDir: string,
+	prUrl: string,
+	reviewHistory: string,
+	previousItems: FingerprintItem[],
+	changedItems: FingerprintItem[],
+): Promise<{ decision: "USER_CONFIRM" | "REVIEW_REJECTED"; replyNeeded: boolean; note: string }> {
+	const monitorText = await runDelegatedAgent(
+		repoRoot,
+		DEFAULT_CONFIG.prMonitorAgent,
+		[
+			"現在の PR 監視について、人手レビューが必要かを自然言語で判定してください。",
+			`Repository root: ${repoRoot}`,
+			`Workflow directory: ${activeDir}`,
+			`PR URL: ${prUrl}`,
+			`レビュー履歴ファイル: ${REVIEW_FILE_PATH}`,
+			reviewHistory.trim() ? `現在の review markdown:\n\n${reviewHistory}` : "現在 review markdown は空です。",
+			`前回までに観測済みの PR feedback:\n${summarizeFingerprintItems(previousItems)}`,
+			`今回新たに観測した PR feedback:\n${summarizeFingerprintItems(changedItems)}`,
+			"判定ルール:",
+			"- 実装修正や review 再対応が必要なら REVIEW_REJECTED",
+			"- 既知内容の言い換え、情報提供、軽微な bot 更新、返信だけでよい内容なら USER_CONFIRM",
+			"- review markdown を踏まえて返信した方がよいなら COMMENT_REPLY_NEEDED: yes",
+			"最終出力は必ず次の3行で始めてください。",
+			"PR_MONITOR_DECISION: USER_CONFIRM または REVIEW_REJECTED",
+			"COMMENT_REPLY_NEEDED: yes または no",
+			"NOTE: <short note>",
+		].join("\n\n"),
+	);
+	const decisionMatch = monitorText.match(/^PR_MONITOR_DECISION:\s*(USER_CONFIRM|REVIEW_REJECTED)\s*$/im);
+	const replyMatch = monitorText.match(/^COMMENT_REPLY_NEEDED:\s*(yes|no)\s*$/im);
+	const noteMatch = monitorText.match(/^NOTE:\s*(.+)$/im);
+	if (!decisionMatch || !replyMatch) {
+		throw new Error(`PR monitor agent returned an invalid decision:\n${monitorText}`);
+	}
+	return {
+		decision: decisionMatch[1] as "USER_CONFIRM" | "REVIEW_REJECTED",
+		replyNeeded: replyMatch[1] === "yes",
+		note: noteMatch?.[1]?.trim() || "delegated PR monitor decision",
+	};
 }
 
 export function createCommitHandler(repoRoot: string, activeDir: string) {
@@ -474,44 +518,43 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			return { prMonitorPath: PR_MONITOR_PATH, disposition: "PENDING", nextAction: "WAIT", prUrl };
 		}
 
-		if (autoReplyTargets.length > 0) {
-			const reviewHistory = await readTextIfExists(repoPath(repoRoot, REVIEW_FILE_PATH));
-			for (const target of autoReplyTargets) {
-				await postPrComment(repoRoot, prUrl, createAutoReplyBody(target, reviewHistory));
+		const reviewHistory = await readTextIfExists(repoPath(repoRoot, REVIEW_FILE_PATH));
+		if (changedItems.length > 0) {
+			const judgement = await judgePrFeedbackWithAgent(repoRoot, activeDir, prUrl, reviewHistory, previousItems, changedItems);
+			if (judgement.decision === "REVIEW_REJECTED") {
+				await appendRejectedReviewFromPr(repoRoot, pr);
+				const monitorText = createPrMonitorMarkdown(pr, checks, "REVIEW_REJECTED", judgement.note);
+				await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
+				await saveMeta(repoRoot, {
+					...basePatch,
+					prMonitorDisposition: "ACTION_REQUIRED",
+					prMonitorNextAction: "REVIEW_REJECTED",
+					latestReviewFile: REVIEW_FILE_PATH,
+					latestReviewDisposition: "REJECTED",
+				});
+				throw new Error(`pr monitor detected new review comments: see ${REVIEW_FILE_PATH}`);
 			}
-			const monitorText = createPrMonitorMarkdown(
-				pr,
-				checks,
-				"USER_CONFIRM",
-				`${autoReplyTargets.length} 件のコメントに review markdown を参照して返信しました。ユーザー確認待ちです。`,
-			);
-			await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
-			await saveMeta(repoRoot, {
-				...basePatch,
-				prMonitorDisposition: "OK",
-				prMonitorNextAction: "USER_CONFIRM",
-				prWorkflowCompletedAt: typeof meta.prWorkflowCompletedAt === "string" ? meta.prWorkflowCompletedAt : new Date().toISOString(),
-			});
-			return { prMonitorPath: PR_MONITOR_PATH, disposition: "OK", nextAction: "USER_CONFIRM", prUrl };
-		}
 
-		if (hasUnhandledReviewFeedback(changedItems, autoReplyTargets, viewerLogin)) {
-			await appendRejectedReviewFromPr(repoRoot, pr);
-			const monitorText = createPrMonitorMarkdown(
-				pr,
-				checks,
-				"REVIEW_REJECTED",
-				"workflow 完了前と比較して PR コメントまたは review が変化したため、review 差し戻しへ戻します。",
-			);
-			await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
-			await saveMeta(repoRoot, {
-				...basePatch,
-				prMonitorDisposition: "ACTION_REQUIRED",
-				prMonitorNextAction: "REVIEW_REJECTED",
-				latestReviewFile: REVIEW_FILE_PATH,
-				latestReviewDisposition: "REJECTED",
-			});
-			throw new Error(`pr monitor detected new review comments: see ${REVIEW_FILE_PATH}`);
+			if (judgement.replyNeeded && autoReplyTargets.length > 0) {
+				for (const target of autoReplyTargets) {
+					await postPrComment(repoRoot, prUrl, createAutoReplyBody(target, reviewHistory));
+				}
+				const monitorText = createPrMonitorMarkdown(
+					pr,
+					checks,
+					"USER_CONFIRM",
+					`${autoReplyTargets.length} 件のコメントに review markdown を参照して返信しました。${judgement.note}`,
+				);
+				await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
+				await saveMeta(repoRoot, {
+					...basePatch,
+					prMonitorDisposition: "OK",
+					prMonitorNextAction: "USER_CONFIRM",
+					prPendingCommentFingerprint: fingerprint,
+					prWorkflowCompletedAt: typeof meta.prWorkflowCompletedAt === "string" ? meta.prWorkflowCompletedAt : new Date().toISOString(),
+				});
+				return { prMonitorPath: PR_MONITOR_PATH, disposition: "OK", nextAction: "USER_CONFIRM", prUrl };
+			}
 		}
 
 		const monitorText = createPrMonitorMarkdown(
@@ -525,6 +568,7 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			...basePatch,
 			prMonitorDisposition: checks.some((check) => ["fail", "cancel"].includes(check.bucket ?? "")) ? "ACTION_REQUIRED" : "OK",
 			prMonitorNextAction: "USER_CONFIRM",
+			prPendingCommentFingerprint: fingerprint,
 			prWorkflowCompletedAt: typeof meta.prWorkflowCompletedAt === "string" ? meta.prWorkflowCompletedAt : new Date().toISOString(),
 		});
 		return { prMonitorPath: PR_MONITOR_PATH, disposition: "OK", nextAction: "USER_CONFIRM", prUrl };

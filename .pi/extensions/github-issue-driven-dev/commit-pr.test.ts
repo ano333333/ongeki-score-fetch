@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PR_MONITOR_PATH, REVIEW_FILE_PATH } from "./constants.ts";
-import { createPrHandler, createPrMonitorHandler, createPrMonitorWaitHandler } from "./handlers/commit-pr.ts";
+import { createCommitHandler, createPrHandler, createPrMonitorHandler, createPrMonitorWaitHandler } from "./handlers/commit-pr.ts";
 import { ensureDir, readTextIfExists, writeText } from "./io.ts";
 import { loadMeta, saveMeta } from "./meta.ts";
 import { runDelegatedAgent } from "./subagent.ts";
 import { runCommand, runGhJson } from "./command.ts";
+import { summarizeWorkingTreeStatus } from "./working-tree.ts";
 
 vi.mock("./subagent.ts", () => ({
 	runDelegatedAgent: vi.fn(),
@@ -32,6 +33,10 @@ vi.mock("./io.ts", () => ({
 	listReviewFiles: vi.fn(),
 }));
 
+vi.mock("./working-tree.ts", () => ({
+	summarizeWorkingTreeStatus: vi.fn(),
+}));
+
 describe("commit/pr handlers", () => {
 	const repoRoot = "/repo";
 	const activeDir = "/repo/.pi/workflows/github-issue-driven-dev/current";
@@ -43,9 +48,25 @@ describe("commit/pr handlers", () => {
 	const runDelegatedAgentMock = vi.mocked(runDelegatedAgent);
 	const runGhJsonMock = vi.mocked(runGhJson);
 	const runCommandMock = vi.mocked(runCommand);
+	const summarizeWorkingTreeStatusMock = vi.mocked(summarizeWorkingTreeStatus);
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		summarizeWorkingTreeStatusMock.mockResolvedValue("## Working tree\n- clean\n");
+	});
+
+	it("passes working tree hygiene guidance to the commit agent", async () => {
+		runDelegatedAgentMock.mockResolvedValue("COMMITS:\n- abc123 test commit\n");
+
+		const handler = createCommitHandler(repoRoot, activeDir);
+		await expect(handler()).resolves.toEqual({ commitsPath: ".pi/workflows/github-issue-driven-dev/current/COMMITS.md" });
+		expect(summarizeWorkingTreeStatusMock).toHaveBeenCalledWith(repoRoot);
+		expect(runDelegatedAgentMock).toHaveBeenCalledWith(
+			repoRoot,
+			"issue-committer",
+			expect.stringContaining("不要ファイルや生成物を盲目的に commit せず"),
+		);
+		expect(runDelegatedAgentMock).toHaveBeenCalledWith(repoRoot, "issue-committer", expect.stringContaining("## Working tree"));
 	});
 
 	it("pushes the current branch when metadata already has an open PR URL", async () => {

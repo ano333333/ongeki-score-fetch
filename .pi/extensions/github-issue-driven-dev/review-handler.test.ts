@@ -4,6 +4,7 @@ import { createReviewHandler } from "./handlers/review.ts";
 import { ensureDir, readTextIfExists, writeText } from "./io.ts";
 import { saveMeta } from "./meta.ts";
 import { runDelegatedAgent } from "./subagent.ts";
+import { summarizeWorkingTreeStatus } from "./working-tree.ts";
 
 vi.mock("./subagent.ts", () => ({
 	runDelegatedAgent: vi.fn(),
@@ -24,6 +25,10 @@ vi.mock("./io.ts", () => ({
 	listReviewFiles: vi.fn(),
 }));
 
+vi.mock("./working-tree.ts", () => ({
+	summarizeWorkingTreeStatus: vi.fn(),
+}));
+
 describe("createReviewHandler", () => {
 	const repoRoot = "/repo";
 	const activeDir = "/repo/.pi/workflows/github-issue-driven-dev/current";
@@ -33,9 +38,11 @@ describe("createReviewHandler", () => {
 	const writeTextMock = vi.mocked(writeText);
 	const saveMetaMock = vi.mocked(saveMeta);
 	const runDelegatedAgentMock = vi.mocked(runDelegatedAgent);
+	const summarizeWorkingTreeStatusMock = vi.mocked(summarizeWorkingTreeStatus);
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		summarizeWorkingTreeStatusMock.mockResolvedValue("## Working tree\n- clean\n");
 	});
 
 	it("creates a single review file on first review", async () => {
@@ -51,6 +58,12 @@ describe("createReviewHandler", () => {
 			"issue-reviewer",
 			expect.stringContaining(`レビュー履歴ファイル: ${REVIEW_FILE_PATH}`),
 		);
+		expect(runDelegatedAgentMock).toHaveBeenCalledWith(
+			repoRoot,
+			"issue-reviewer",
+			expect.stringContaining("不要ファイルや生成物の混入がないか"),
+		);
+		expect(runDelegatedAgentMock).toHaveBeenCalledWith(repoRoot, "issue-reviewer", expect.stringContaining("## Working tree"));
 		expect(writeTextMock).toHaveBeenCalledWith(
 			expect.stringContaining(REVIEW_FILE_PATH),
 			expect.stringContaining("# Review History\n\n## Review Round 1\n\nREVIEW: ACCEPTED"),

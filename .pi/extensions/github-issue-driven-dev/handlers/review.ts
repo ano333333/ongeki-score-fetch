@@ -3,6 +3,7 @@ import { ensureDir, readTextIfExists, writeText } from "../io.ts";
 import { saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
 import { runDelegatedAgent } from "../subagent.ts";
+import { summarizeWorkingTreeStatus } from "../working-tree.ts";
 
 function countReviewRounds(reviewHistory: string): number {
 	return (reviewHistory.match(/^## Review Round /gm) ?? []).length;
@@ -21,6 +22,7 @@ export function createReviewHandler(repoRoot: string, activeDir: string, reviews
 		const reviewFilePath = repoPath(repoRoot, REVIEW_FILE_PATH);
 		const reviewHistory = await readTextIfExists(reviewFilePath);
 		const reviewRound = countReviewRounds(reviewHistory) + 1;
+		const workTreeSummary = await summarizeWorkingTreeStatus(repoRoot);
 		const reviewText = await runDelegatedAgent(
 			repoRoot,
 			DEFAULT_CONFIG.reviewAgent,
@@ -33,6 +35,8 @@ export function createReviewHandler(repoRoot: string, activeDir: string, reviews
 				reviewHistory.trim()
 					? `以下は同一ファイルに蓄積されている過去のレビュー履歴と修正メモです。これを踏まえて今回のレビューだけを出力してください。\n\n${reviewHistory}`
 					: "今回が初回レビューです。まだレビュー履歴ファイルの内容はありません。",
+				"あわせて、不要ファイルや生成物の混入がないかも確認してください。",
+				`現在の working tree 要約:\n\n${workTreeSummary}`,
 				"あなたの出力は workflow 側で同じレビュー履歴ファイルに追記されます。",
 				"1 行目は必ず次のいずれか 1 つにしてください。",
 				"REVIEW: ACCEPTED",

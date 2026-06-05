@@ -50,8 +50,9 @@ export default function githubIssueDrivenDevExtension(pi: ExtensionAPI): void {
 					"必要に応じてファイル調査、コード編集、コマンド実行を行って構いません。",
 					"実装の最後に git status を確認し、不要ファイルや意図しない生成物（不要ログ、tmp、untracked build artifact など）を残さないでください。",
 					"重要な判断があれば、セッションに有用な reasoning を残してください。",
+					"この実装フェーズでは、ここで行った変更を review フェーズに渡せる状態まで整えることが目的です。PR 作成や PR 監視は後続 state で行われます。",
 					"レビュー通過後は PR 作成に加えて .pi/workflows/github-issue-driven-dev/current/PR_MONITOR.md へ GitHub Actions / CodeRabbit の監視結果も残る前提で進めてください。",
-					"実装が完了したら workflow_next tool を transitionId: to-run-formatter で呼び、formatter 実行へ進んでください。",
+					"レビューに進むには、実装が一区切りついた時点で workflow_next tool を transitionId: to-run-formatter で呼び、formatter 実行へ進んでください。",
 				].join("\n"),
 			),
 		});

@@ -90,7 +90,8 @@ stateDiagram-v2
 - これは base extension の素の `userMessage` action ではなく、follow-up 配信を使って agent が同じセッション内で `workflow_next` を呼べるようにするための実装
 - agent は `ISSUE.md` と `PLAN.md` を読み、必要な範囲だけ実装する
 - 実装完了前に `git status` を見て、不要ファイル・一時ファイル・意図しない生成物が残っていないか確認する
-- 完了後は `workflow_next` で formatter へ進み、base extension 側が `run-formatter -> run-linter -> run-test -> review` を自動連鎖実行する
+- この state の完了条件は「review に渡せる実装が一区切りついたこと」であり、PR 作成や PR 監視まで終えることではない
+- review に進むときは `workflow_next` で formatter へ進み、base extension 側が `run-formatter -> run-linter -> run-test -> review` を自動連鎖実行する
 
 ### 4. `run-formatter`
 - formatter を実行する

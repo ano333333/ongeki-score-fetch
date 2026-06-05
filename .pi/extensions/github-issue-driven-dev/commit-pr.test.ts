@@ -74,7 +74,7 @@ describe("commit/pr handlers", () => {
 		);
 	});
 
-	it("does not reuse a closed PR URL from metadata and creates a new PR when no open PR exists", async () => {
+	it("does not reuse a closed PR URL from metadata, clears prUrl, and creates a new PR when no open PR exists", async () => {
 		loadMetaMock.mockResolvedValue({ prUrl: "https://github.com/owner/repo/pull/123" });
 		runGhJsonMock
 			.mockResolvedValueOnce({ url: "https://github.com/owner/repo/pull/123", state: "CLOSED", mergedAt: null })
@@ -87,6 +87,12 @@ describe("commit/pr handlers", () => {
 			prPath: ".pi/workflows/github-issue-driven-dev/current/PR.md",
 			prUrl: "https://github.com/owner/repo/pull/124",
 		});
+		expect(saveMetaMock).toHaveBeenCalledWith(
+			repoRoot,
+			expect.objectContaining({
+				prUrl: null,
+			}),
+		);
 		expect(runGhJsonMock).toHaveBeenNthCalledWith(
 			2,
 			["pr", "list", "--head", "feature/new", "--state", "open", "--json", "url", "--limit", "1"],
@@ -207,6 +213,36 @@ describe("commit/pr handlers", () => {
 		expect(saveMetaMock).toHaveBeenCalledWith(
 			repoRoot,
 			expect.objectContaining({ latestReviewDisposition: "REJECTED", prMonitorNextAction: "REVIEW_REJECTED" }),
+		);
+	});
+
+	it("clears prUrl and rejects when monitor detects a closed unmerged PR", async () => {
+		loadMetaMock.mockResolvedValue({ prUrl: "https://github.com/owner/repo/pull/123" });
+		runGhJsonMock
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "CLOSED",
+				mergedAt: null,
+				updatedAt: "2026-06-04T19:01:11Z",
+				comments: [],
+				reviews: [],
+			})
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({ login: "ano333333" });
+
+		const handler = createPrMonitorHandler(repoRoot, activeDir);
+		await expect(handler()).rejects.toThrow("pr monitor detected closed unmerged PR; open PR required");
+		expect(writeTextMock).toHaveBeenCalledWith(
+			expect.stringContaining(PR_MONITOR_PATH),
+			expect.stringContaining("open PR は存在しないものとして扱います"),
+		);
+		expect(saveMetaMock).toHaveBeenCalledWith(
+			repoRoot,
+			expect.objectContaining({
+				prUrl: null,
+				prMonitorDisposition: "ACTION_REQUIRED",
+				prMonitorNextAction: "REVIEW_REJECTED",
+			}),
 		);
 	});
 

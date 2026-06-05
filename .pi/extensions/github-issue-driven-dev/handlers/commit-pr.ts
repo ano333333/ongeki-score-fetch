@@ -197,6 +197,10 @@ function isOpenPr(pr: { state?: string | null; mergedAt?: string | null }): bool
 	return pr.state === "OPEN" && !pr.mergedAt;
 }
 
+function isClosedUnmergedPr(pr: { state?: string | null; mergedAt?: string | null }): boolean {
+	return pr.state === "CLOSED" && !pr.mergedAt;
+}
+
 async function appendRejectedReviewFromPr(repoRoot: string, pr: PullRequestView): Promise<void> {
 	const reviewFilePath = repoPath(repoRoot, REVIEW_FILE_PATH);
 	await ensureDir(repoPath(repoRoot, REVIEW_FILE_PATH.split("/").slice(0, -1).join("/")));
@@ -349,8 +353,13 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 					});
 					return { prPath: PR_PATH, prUrl: existingMetaUrl, skipped: true, pushedBranch };
 				}
+				await saveMeta(repoRoot, {
+					prUrl: null,
+					prMonitorNextAction: undefined,
+					prMonitorDisposition: undefined,
+				});
 			} catch {
-				// fall through and search/create an open PR
+				await saveMeta(repoRoot, { prUrl: null });
 			}
 		}
 
@@ -429,10 +438,28 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
 			await saveMeta(repoRoot, {
 				...basePatch,
+				prUrl: null,
 				prMonitorDisposition: "COMPLETED",
 				prMonitorNextAction: "COMPLETED",
 			});
 			return { prMonitorPath: PR_MONITOR_PATH, disposition: "COMPLETED", nextAction: "COMPLETED", prUrl };
+		}
+
+		if (isClosedUnmergedPr(pr)) {
+			const monitorText = createPrMonitorMarkdown(
+				pr,
+				checks,
+				"REVIEW_REJECTED",
+				"PR が close されており open PR は存在しないものとして扱います。必要なら再実装後に新規 PR を作成してください。",
+			);
+			await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
+			await saveMeta(repoRoot, {
+				...basePatch,
+				prUrl: null,
+				prMonitorDisposition: "ACTION_REQUIRED",
+				prMonitorNextAction: "REVIEW_REJECTED",
+			});
+			throw new Error("pr monitor detected closed unmerged PR; open PR required");
 		}
 
 		if (!allChecksComplete) {

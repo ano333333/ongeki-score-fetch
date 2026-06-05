@@ -246,6 +246,38 @@ describe("commit/pr handlers", () => {
 		);
 	});
 
+	it("clears prUrl and completes when monitor detects a merged PR", async () => {
+		loadMetaMock.mockResolvedValue({ prUrl: "https://github.com/owner/repo/pull/123" });
+		runGhJsonMock
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "MERGED",
+				mergedAt: "2026-06-04T19:01:11Z",
+				updatedAt: "2026-06-04T19:01:11Z",
+				comments: [],
+				reviews: [],
+			})
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({ login: "ano333333" });
+
+		const handler = createPrMonitorHandler(repoRoot, activeDir);
+		await expect(handler()).resolves.toEqual({
+			prMonitorPath: PR_MONITOR_PATH,
+			disposition: "COMPLETED",
+			nextAction: "COMPLETED",
+			prUrl: "https://github.com/owner/repo/pull/123",
+		});
+		expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining(PR_MONITOR_PATH), expect.stringContaining("PR_MONITOR: COMPLETED"));
+		expect(saveMetaMock).toHaveBeenCalledWith(
+			repoRoot,
+			expect.objectContaining({
+				prUrl: null,
+				prMonitorDisposition: "COMPLETED",
+				prMonitorNextAction: "COMPLETED",
+			}),
+		);
+	});
+
 	it("wait handler notifies user when PR is merged", async () => {
 		const sendUserMessage = vi.fn();
 		loadMetaMock.mockResolvedValue({ prMonitorNextAction: "COMPLETED" });

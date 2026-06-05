@@ -91,6 +91,7 @@ describe("commit/pr handlers", () => {
 				prUrl: "https://github.com/owner/repo/pull/123",
 				prAgent: "issue-pr-author",
 				prPushedBranch: "feature/test",
+				prWorkflowCompletedAt: null,
 			}),
 		);
 	});
@@ -120,6 +121,13 @@ describe("commit/pr handlers", () => {
 			repoRoot,
 		);
 		expect(runDelegatedAgentMock).toHaveBeenCalled();
+		expect(saveMetaMock).toHaveBeenLastCalledWith(
+			repoRoot,
+			expect.objectContaining({
+				prUrl: "https://github.com/owner/repo/pull/124",
+				prWorkflowCompletedAt: null,
+			}),
+		);
 	});
 
 	it("pushes the current branch when gh detects an existing open PR", async () => {
@@ -142,6 +150,13 @@ describe("commit/pr handlers", () => {
 		);
 		expect(runCommandMock).toHaveBeenNthCalledWith(2, "git branch --show-current", repoRoot);
 		expect(runCommandMock).toHaveBeenNthCalledWith(3, "git push", repoRoot);
+		expect(saveMetaMock).toHaveBeenCalledWith(
+			repoRoot,
+			expect.objectContaining({
+				prUrl: "https://github.com/owner/repo/pull/123",
+				prWorkflowCompletedAt: null,
+			}),
+		);
 	});
 
 	it("stores pending monitor output and asks the wait state to retry", async () => {
@@ -168,6 +183,36 @@ describe("commit/pr handlers", () => {
 		expect(saveMetaMock).toHaveBeenCalledWith(
 			repoRoot,
 			expect.objectContaining({ prMonitorDisposition: "PENDING", prMonitorNextAction: "WAIT" }),
+		);
+	});
+
+	it("waits when a newly pushed PR has not exposed checks yet", async () => {
+		loadMetaMock.mockResolvedValue({
+			prUrl: "https://github.com/owner/repo/pull/123",
+			prPushedAt: "2026-06-05T05:16:15.533Z",
+			prWorkflowCompletedAt: "2026-06-05T04:13:20.122Z",
+		});
+		runGhJsonMock
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "OPEN",
+				updatedAt: "2026-06-05T05:16:20Z",
+				comments: [],
+				reviews: [],
+			})
+			.mockResolvedValueOnce([])
+			.mockResolvedValueOnce({ login: "ano333333" });
+
+		const handler = createPrMonitorHandler(repoRoot, activeDir);
+		await expect(handler()).resolves.toEqual({
+			prMonitorPath: PR_MONITOR_PATH,
+			disposition: "PENDING",
+			nextAction: "WAIT",
+			prUrl: "https://github.com/owner/repo/pull/123",
+		});
+		expect(writeTextMock).toHaveBeenCalledWith(
+			expect.stringContaining(PR_MONITOR_PATH),
+			expect.stringContaining("最新の PR 更新に対する check がまだ観測されていない"),
 		);
 	});
 

@@ -55,6 +55,8 @@ type PrCheck = {
 
 type PrMonitorNextAction = "WAIT" | "USER_CONFIRM" | "COMPLETED" | "REVIEW_REJECTED";
 
+type MonitorMeta = Record<string, unknown>;
+
 type FingerprintItem = {
 	kind: "comment" | "review";
 	author: string;
@@ -101,6 +103,37 @@ function fingerprintItems(pr: PullRequestView): FingerprintItem[] {
 
 function commentFingerprint(pr: PullRequestView): string {
 	return JSON.stringify(fingerprintItems(pr));
+}
+
+function parseIsoTimestamp(value: unknown): number | null {
+	if (typeof value !== "string" || !value) return null;
+	const parsed = Date.parse(value);
+	return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getLatestPrCycleStartedAt(meta: MonitorMeta): number | null {
+	const candidates = [parseIsoTimestamp(meta.prCreatedAt), parseIsoTimestamp(meta.prPushedAt)].filter(
+		(value): value is number => value !== null,
+	);
+	if (candidates.length === 0) return null;
+	return Math.max(...candidates);
+}
+
+function hasCompletedCurrentPrCycle(meta: MonitorMeta): boolean {
+	const completedAt = parseIsoTimestamp(meta.prWorkflowCompletedAt);
+	if (completedAt === null) return false;
+	const latestCycleStartedAt = getLatestPrCycleStartedAt(meta);
+	if (latestCycleStartedAt === null) return true;
+	return completedAt >= latestCycleStartedAt;
+}
+
+function isPendingCheck(check: PrCheck): boolean {
+	const values = [check.bucket, check.state]
+		.filter((value): value is string => typeof value === "string" && value.length > 0)
+		.map((value) => value.toLowerCase());
+	return values.some((value) =>
+		["pending", "queued", "startup", "in_progress", "in progress", "waiting", "requested", "expected"].includes(value),
+	);
 }
 
 function parseFingerprint(value: unknown): FingerprintItem[] {
@@ -397,6 +430,9 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 						prSkippedAt: new Date().toISOString(),
 						prPushedAt: new Date().toISOString(),
 						prPushedBranch: pushedBranch,
+						prWorkflowCompletedAt: null,
+						prMonitorDisposition: undefined,
+						prMonitorNextAction: undefined,
 						prAgent: DEFAULT_CONFIG.prAgent,
 					});
 					return { prPath: PR_PATH, prUrl: existingMetaUrl, skipped: true, pushedBranch };
@@ -423,6 +459,9 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 				prSkippedAt: new Date().toISOString(),
 				prPushedAt: new Date().toISOString(),
 				prPushedBranch: pushedBranch,
+				prWorkflowCompletedAt: null,
+				prMonitorDisposition: undefined,
+				prMonitorNextAction: undefined,
 				prAgent: DEFAULT_CONFIG.prAgent,
 			});
 			return { prPath: PR_PATH, prUrl: existingBranchPrUrl, skipped: true, pushedBranch };
@@ -445,6 +484,9 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 		await saveMeta(repoRoot, {
 			prUrl: urlMatch?.[1] ?? null,
 			prCreatedAt: new Date().toISOString(),
+			prWorkflowCompletedAt: null,
+			prMonitorDisposition: undefined,
+			prMonitorNextAction: undefined,
 			prAgent: DEFAULT_CONFIG.prAgent,
 		});
 		if (!urlMatch?.[1]) throw new Error(`PR URL not found in ${PR_PATH}`);
@@ -469,7 +511,9 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			repoRoot,
 		);
 		const fingerprint = commentFingerprint(pr);
-		const allChecksComplete = checks.every((check) => (check.bucket ?? "pass") !== "pending");
+		const currentCycleCompleted = hasCompletedCurrentPrCycle(meta);
+		const hasCheckActivity = checks.length > 0;
+		const allChecksComplete = hasCheckActivity && checks.every((check) => !isPendingCheck(check));
 		const previousItems = parseFingerprint(meta.prPendingCommentFingerprint);
 		const viewerLogin = await getViewerLogin(repoRoot);
 		const changedItems = diffFingerprintItems(previousItems, fingerprintItems(pr));
@@ -510,8 +554,11 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			throw new Error("pr monitor detected closed unmerged PR; open PR required");
 		}
 
-		if (!allChecksComplete) {
-			const monitorText = createPrMonitorMarkdown(pr, checks, "WAIT", "workflow がまだ完了していないため、待機後に再確認します。");
+		if (!currentCycleCompleted && !allChecksComplete) {
+			const reason = hasCheckActivity
+				? "workflow がまだ完了していないため、待機後に再確認します。"
+				: "最新の PR 更新に対する check がまだ観測されていないため、待機後に再確認します。";
+			const monitorText = createPrMonitorMarkdown(pr, checks, "WAIT", reason);
 			await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
 			await saveMeta(repoRoot, {
 				...basePatch,

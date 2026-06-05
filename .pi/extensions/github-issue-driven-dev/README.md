@@ -129,15 +129,22 @@ stateDiagram-v2
 
 ### 13. `monitor-pr`
 - `gh pr view` / `gh pr checks` で PR の状態、workflow 完了状況、コメント変化を確認する
-- merge 済み・workflow 未完了・workflow 完了後コメント変化・ユーザー確認待ちを判定する
+- closed な PR は再利用対象に含めない
+- workflow 未完了なら待機ループへ進む
+- workflow 完了後は、CodeRabbit 由来など返信が必要なコメントに review markdown を参照した返信を行う
+- workflow 完了後に未処理の review / comment 変化があれば review markdown に `REVIEW: REJECTED` を追記し、review 修正フローへ戻す
+- ジョブ完了かつ必要なコメント対応も完了していれば、ユーザー確認待ちへ進む
 - 結果を `PR_MONITOR.md` と `meta.json` に保存する
-- workflow 完了後にコメント変化があれば review markdown に `REVIEW: REJECTED` を追記し、review 修正フローへ戻す
 
 ### 14. `wait-pr-monitor`
 - `monitor-pr` の判定結果に応じて次の動作を行う
 - `WAIT` の場合は 3 分待ってから `monitor-pr` を再実行する
-- `COMPLETED` の場合は merge 完了として workflow を終了する
-- `USER_CONFIRM` の場合はユーザー確認待ちメッセージを出して終了する
+- `USER_CONFIRM` / `COMPLETED` の場合は `pr-user-confirm` へ進む
+
+### 15. `pr-user-confirm`
+- `PR_MONITOR.md` を読むユーザー確認待ちステート
+- `manualOrAgent` で `monitor-pr` に戻して再確認できる
+- `manualOrAgent` で `implement` に戻して追加修正を再開できる
 
 ## subagent の役割
 
@@ -155,7 +162,6 @@ stateDiagram-v2
 
 ## 現在の制約
 
-- `wait-pr-monitor` は API 制約上、待機ループとユーザー確認待ちの終端処理を兼ねている
 - workflow の guard 分岐 API がないため、PR 監視後の詳細分岐は handler 内で `meta.json` に記録した次アクションで表現している
 
 ## 関連ファイル

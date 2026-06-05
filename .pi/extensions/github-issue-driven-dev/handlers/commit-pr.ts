@@ -535,6 +535,7 @@ export function createPrMonitorWaitHandler(pi: ExtensionAPI, repoRoot: string) {
 	return async () => {
 		const meta = await loadMeta(repoRoot);
 		const nextAction = typeof meta.prMonitorNextAction === "string" ? (meta.prMonitorNextAction as PrMonitorNextAction) : "WAIT";
+		const prUrl = typeof meta.prUrl === "string" && meta.prUrl ? meta.prUrl : null;
 		if (nextAction === "WAIT") {
 			await new Promise((resolve) => setTimeout(resolve, PR_MONITOR_WAIT_MS));
 			throw new Error("retry pr monitor after wait");
@@ -547,6 +548,12 @@ export function createPrMonitorWaitHandler(pi: ExtensionAPI, repoRoot: string) {
 				].join("\n"),
 				{ deliverAs: "followUp" },
 			);
+			return { nextAction };
+		}
+		if (nextAction === "USER_CONFIRM") {
+			if (!prUrl) {
+				throw new Error("pr monitor user confirm requires an open PR");
+			}
 			return { nextAction };
 		}
 		return { nextAction };

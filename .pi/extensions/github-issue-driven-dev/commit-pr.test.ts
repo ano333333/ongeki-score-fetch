@@ -255,12 +255,30 @@ describe("commit/pr handlers", () => {
 		expect(sendUserMessage).toHaveBeenCalledWith(expect.stringContaining(PR_MONITOR_PATH), { deliverAs: "followUp" });
 	});
 
-	it("wait handler resolves on user confirm without sending an extra follow-up", async () => {
+	it("wait handler resolves on user confirm only when an open PR is still tracked", async () => {
 		const sendUserMessage = vi.fn();
-		loadMetaMock.mockResolvedValue({ prMonitorNextAction: "USER_CONFIRM" });
+		loadMetaMock.mockResolvedValue({ prMonitorNextAction: "USER_CONFIRM", prUrl: "https://github.com/owner/repo/pull/123" });
 
 		const handler = createPrMonitorWaitHandler({ sendUserMessage } as never, repoRoot);
 		await expect(handler()).resolves.toEqual({ nextAction: "USER_CONFIRM" });
+		expect(sendUserMessage).not.toHaveBeenCalled();
+	});
+
+	it("wait handler rejects stale user confirm when no open PR is tracked", async () => {
+		const sendUserMessage = vi.fn();
+		loadMetaMock.mockResolvedValue({ prMonitorNextAction: "USER_CONFIRM", prUrl: null });
+
+		const handler = createPrMonitorWaitHandler({ sendUserMessage } as never, repoRoot);
+		await expect(handler()).rejects.toThrow("pr monitor user confirm requires an open PR");
+		expect(sendUserMessage).not.toHaveBeenCalled();
+	});
+
+	it("wait handler passes through non-confirm actions that should already be handled by earlier workflow transitions", async () => {
+		const sendUserMessage = vi.fn();
+		loadMetaMock.mockResolvedValue({ prMonitorNextAction: "REVIEW_REJECTED", prUrl: null });
+
+		const handler = createPrMonitorWaitHandler({ sendUserMessage } as never, repoRoot);
+		await expect(handler()).resolves.toEqual({ nextAction: "REVIEW_REJECTED" });
 		expect(sendUserMessage).not.toHaveBeenCalled();
 	});
 });

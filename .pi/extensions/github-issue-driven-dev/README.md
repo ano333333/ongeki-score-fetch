@@ -89,6 +89,7 @@ stateDiagram-v2
 - function handler が **follow-up user message** として実装指示を送信し、その後 workflow は agent / manual の遷移待ちに入る
 - これは base extension の素の `userMessage` action ではなく、follow-up 配信を使って agent が同じセッション内で `workflow_next` を呼べるようにするための実装
 - agent は `ISSUE.md` と `PLAN.md` を読み、必要な範囲だけ実装する
+- 実装完了前に `git status` を見て、不要ファイル・一時ファイル・意図しない生成物が残っていないか確認する
 - 完了後は `workflow_next` で formatter へ進み、base extension 側が `run-formatter -> run-linter -> run-test -> review` を自動連鎖実行する
 
 ### 4. `run-formatter`
@@ -113,6 +114,7 @@ stateDiagram-v2
 
 ### 9. `review`
 - reviewer subagent が差分をレビューする
+- review 時には working tree 要約も渡し、不要ファイル・生成物混入の有無も確認する
 - review は `reviews/review.md` に追記される
 - `REVIEW: ACCEPTED` なら commit へ進む
 - `REVIEW: REJECTED` なら `address-review` へ進む
@@ -124,6 +126,7 @@ stateDiagram-v2
 
 ### 11. `commit`
 - committer subagent が論理的な git commit を作成する
+- commit 前に working tree 要約を見て、不要ファイルや一時生成物を盲目的に含めない
 - 結果を `COMMITS.md` に保存する
 
 ### 12. `create-pr`
@@ -176,4 +179,5 @@ stateDiagram-v2
 - `handlers/review.ts`
 - `handlers/commit-pr.ts`
 - `subagent.ts`: project agent 呼び出し
+- `working-tree.ts`: git status 要約と不要ファイル候補の抽出
 - `adrs/001.md`: 設計メモ

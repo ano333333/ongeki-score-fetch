@@ -184,12 +184,21 @@ describe("github-issue-driven-dev verification workflow", () => {
 		expect(nextStateForResult("monitor-pr", false)).toBe("address-review");
 	});
 
-	it("wait-pr-monitor retries monitor-pr on error and otherwise terminates", () => {
+	it("wait-pr-monitor retries monitor-pr on error and advances to pr-user-confirm on success", () => {
 		expect(nextStateForResult("wait-pr-monitor", false)).toBe("monitor-pr");
-		expect(nextStateForResult("wait-pr-monitor", true)).toBeNull();
+		expect(nextStateForResult("wait-pr-monitor", true)).toBe("pr-user-confirm");
 		const state = workflowDefinition.states["wait-pr-monitor"];
 		expect(state.action.kind).toBe("function");
 		if (state.action.kind !== "function") throw new Error("wait-pr-monitor action should be a function");
 		expect(state.action.handler).toBe("githubIssueDrivenDev.waitPrMonitor");
+	});
+
+	it("pr-user-confirm exposes manualOrAgent transitions back to monitor-pr and implement", () => {
+		const state = workflowDefinition.states["pr-user-confirm"];
+		expect(state.action.kind).toBe("userMessage");
+		expect(state.transitions.find((item) => item.id === "retry-monitor-pr-from-user-confirm")?.trigger).toBe("manualOrAgent");
+		expect(state.transitions.find((item) => item.id === "retry-monitor-pr-from-user-confirm")?.to).toBe("monitor-pr");
+		expect(state.transitions.find((item) => item.id === "to-implement-from-pr-user-confirm")?.trigger).toBe("manualOrAgent");
+		expect(state.transitions.find((item) => item.id === "to-implement-from-pr-user-confirm")?.to).toBe("implement");
 	});
 });

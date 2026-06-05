@@ -111,7 +111,26 @@ export const workflowDefinition: ClientWorkflowDefinition = {
 			id: "wait-pr-monitor",
 			title: "PR Status Wait",
 			action: { kind: "function", handler: "githubIssueDrivenDev.waitPrMonitor" },
-			transitions: [{ id: "retry-monitor-pr", to: "monitor-pr", trigger: "error" }],
+			transitions: [
+				{ id: "retry-monitor-pr", to: "monitor-pr", trigger: "error" },
+				{ id: "to-pr-user-confirm", to: "pr-user-confirm", trigger: "success" },
+			],
+		},
+		"pr-user-confirm": {
+			id: "pr-user-confirm",
+			title: "PR User Confirm",
+			action: {
+				kind: "userMessage",
+				content: [
+					"GitHub issue driven dev workflow: PR 監視の確認待ちです。",
+					`${PR_MONITOR_PATH} を読んで PR の状態とコメント対応結果を確認してください。`,
+					"必要なら PR を再確認するため monitor-pr に戻してください。追加実装が必要なら implement に戻してください。",
+				].join("\n"),
+			},
+			transitions: [
+				{ id: "retry-monitor-pr-from-user-confirm", to: "monitor-pr", trigger: "manualOrAgent", label: "recheck PR" },
+				{ id: "to-implement-from-pr-user-confirm", to: "implement", trigger: "manualOrAgent", label: "resume implementation" },
+			],
 		},
 	},
 };

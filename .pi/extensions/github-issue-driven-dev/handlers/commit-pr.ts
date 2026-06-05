@@ -43,6 +43,8 @@ type PullRequestView = {
 	reviews?: PullRequestReview[];
 };
 
+type PullRequestStatusView = Pick<PullRequestView, "url" | "title" | "state" | "mergedAt" | "updatedAt">;
+
 type PrCheck = {
 	bucket?: string | null;
 	completedAt?: string | null;
@@ -502,31 +504,25 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			throw new Error("PR URL not found in metadata. Create the PR before monitoring it.");
 		}
 
-		const pr = await runGhJson<PullRequestView>(
-			["pr", "view", prUrl, "--json", "url,title,state,mergedAt,updatedAt,comments,reviews"],
+		const prStatus = await runGhJson<PullRequestStatusView>(
+			["pr", "view", prUrl, "--json", "url,title,state,mergedAt,updatedAt"],
 			repoRoot,
 		);
 		const checks = await runGhJson<PrCheck[]>(
 			["pr", "checks", prUrl, "--json", "bucket,completedAt,description,link,name,state,workflow"],
 			repoRoot,
 		);
-		const fingerprint = commentFingerprint(pr);
 		const currentCycleCompleted = hasCompletedCurrentPrCycle(meta);
 		const hasCheckActivity = checks.length > 0;
 		const allChecksComplete = hasCheckActivity && checks.every((check) => !isPendingCheck(check));
-		const previousItems = parseFingerprint(meta.prPendingCommentFingerprint);
-		const viewerLogin = await getViewerLogin(repoRoot);
-		const changedItems = diffFingerprintItems(previousItems, fingerprintItems(pr));
-		const autoReplyTargets = collectAutoReplyTargets(pr, previousItems, viewerLogin);
 		const basePatch = {
 			prMonitorAgent: DEFAULT_CONFIG.prMonitorAgent,
 			prMonitoredAt: new Date().toISOString(),
 			prMonitorPath: PR_MONITOR_PATH,
-			prLastCommentFingerprint: fingerprint,
 		};
 
-		if (pr.mergedAt || pr.state === "MERGED") {
-			const monitorText = createPrMonitorMarkdown(pr, checks, "COMPLETED", "PR は merge 済みです。workflow を完了します。");
+		if (prStatus.mergedAt || prStatus.state === "MERGED") {
+			const monitorText = createPrMonitorMarkdown(prStatus, checks, "COMPLETED", "PR は merge 済みです。workflow を完了します。");
 			await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
 			await saveMeta(repoRoot, {
 				...basePatch,
@@ -537,9 +533,9 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			return { prMonitorPath: PR_MONITOR_PATH, disposition: "COMPLETED", nextAction: "COMPLETED", prUrl };
 		}
 
-		if (isClosedUnmergedPr(pr)) {
+		if (isClosedUnmergedPr(prStatus)) {
 			const monitorText = createPrMonitorMarkdown(
-				pr,
+				prStatus,
 				checks,
 				"REVIEW_REJECTED",
 				"PR が close されており open PR は存在しないものとして扱います。必要なら再実装後に新規 PR を作成してください。",
@@ -558,17 +554,25 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			const reason = hasCheckActivity
 				? "workflow がまだ完了していないため、待機後に再確認します。"
 				: "最新の PR 更新に対する check がまだ観測されていないため、待機後に再確認します。";
-			const monitorText = createPrMonitorMarkdown(pr, checks, "WAIT", reason);
+			const monitorText = createPrMonitorMarkdown(prStatus, checks, "WAIT", reason);
 			await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
 			await saveMeta(repoRoot, {
 				...basePatch,
 				prMonitorDisposition: "PENDING",
 				prMonitorNextAction: "WAIT",
-				prPendingCommentFingerprint: fingerprint,
 			});
 			return { prMonitorPath: PR_MONITOR_PATH, disposition: "PENDING", nextAction: "WAIT", prUrl };
 		}
 
+		const pr = await runGhJson<PullRequestView>(
+			["pr", "view", prUrl, "--json", "url,title,state,mergedAt,updatedAt,comments,reviews"],
+			repoRoot,
+		);
+		const fingerprint = commentFingerprint(pr);
+		const previousItems = parseFingerprint(meta.prPendingCommentFingerprint);
+		const viewerLogin = await getViewerLogin(repoRoot);
+		const changedItems = diffFingerprintItems(previousItems, fingerprintItems(pr));
+		const autoReplyTargets = collectAutoReplyTargets(pr, previousItems, viewerLogin);
 		const reviewHistory = await readTextIfExists(repoPath(repoRoot, REVIEW_FILE_PATH));
 		if (changedItems.length > 0) {
 			const judgement = await judgePrFeedbackWithAgent(repoRoot, activeDir, prUrl, reviewHistory, previousItems, changedItems);

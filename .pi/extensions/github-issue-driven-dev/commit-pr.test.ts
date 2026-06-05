@@ -51,7 +51,7 @@ describe("commit/pr handlers", () => {
 	const summarizeWorkingTreeStatusMock = vi.mocked(summarizeWorkingTreeStatus);
 
 	beforeEach(() => {
-		vi.clearAllMocks();
+		vi.resetAllMocks();
 		summarizeWorkingTreeStatusMock.mockResolvedValue("## Working tree\n- clean\n");
 	});
 
@@ -166,11 +166,8 @@ describe("commit/pr handlers", () => {
 				url: "https://github.com/owner/repo/pull/123",
 				state: "OPEN",
 				updatedAt: "2026-06-04T18:00:00Z",
-				comments: [],
-				reviews: [],
 			})
-			.mockResolvedValueOnce([{ name: "build", bucket: "pending", state: "IN_PROGRESS" }])
-			.mockResolvedValueOnce({ login: "ano333333" });
+			.mockResolvedValueOnce([{ name: "build", bucket: "pending", state: "IN_PROGRESS" }]);
 
 		const handler = createPrMonitorHandler(repoRoot, activeDir);
 		await expect(handler()).resolves.toEqual({
@@ -184,6 +181,7 @@ describe("commit/pr handlers", () => {
 			repoRoot,
 			expect.objectContaining({ prMonitorDisposition: "PENDING", prMonitorNextAction: "WAIT" }),
 		);
+		expect(runGhJsonMock).toHaveBeenCalledTimes(2);
 	});
 
 	it("waits when a newly pushed PR has not exposed checks yet", async () => {
@@ -197,11 +195,8 @@ describe("commit/pr handlers", () => {
 				url: "https://github.com/owner/repo/pull/123",
 				state: "OPEN",
 				updatedAt: "2026-06-05T05:16:20Z",
-				comments: [],
-				reviews: [],
 			})
-			.mockResolvedValueOnce([])
-			.mockResolvedValueOnce({ login: "ano333333" });
+			.mockResolvedValueOnce([]);
 
 		const handler = createPrMonitorHandler(repoRoot, activeDir);
 		await expect(handler()).resolves.toEqual({
@@ -214,6 +209,7 @@ describe("commit/pr handlers", () => {
 			expect.stringContaining(PR_MONITOR_PATH),
 			expect.stringContaining("最新の PR 更新に対する check がまだ観測されていない"),
 		);
+		expect(runGhJsonMock).toHaveBeenCalledTimes(2);
 	});
 
 	it("replies to new CodeRabbit comments after checks complete and moves to user confirm", async () => {
@@ -228,6 +224,12 @@ describe("commit/pr handlers", () => {
 				url: "https://github.com/owner/repo/pull/123",
 				state: "OPEN",
 				updatedAt: "2026-06-04T18:10:00Z",
+			})
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "OPEN",
+				updatedAt: "2026-06-04T18:10:00Z",
 				comments: [
 					{
 						author: { login: "coderabbitai" },
@@ -238,7 +240,6 @@ describe("commit/pr handlers", () => {
 				],
 				reviews: [],
 			})
-			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
 			.mockResolvedValueOnce({ login: "ano333333" });
 		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "", stderr: "" });
 
@@ -277,10 +278,15 @@ describe("commit/pr handlers", () => {
 				url: "https://github.com/owner/repo/pull/123",
 				state: "OPEN",
 				updatedAt: "2026-06-04T18:10:00Z",
+			})
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "OPEN",
+				updatedAt: "2026-06-04T18:10:00Z",
 				comments: [],
 				reviews: [{ author: { login: "reviewer" }, body: "please fix this", state: "COMMENTED", updatedAt: "2026-06-04T18:09:00Z" }],
 			})
-			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
 			.mockResolvedValueOnce({ login: "ano333333" });
 
 		const handler = createPrMonitorHandler(repoRoot, activeDir);
@@ -365,10 +371,15 @@ describe("commit/pr handlers", () => {
 				url: "https://github.com/owner/repo/pull/123",
 				state: "OPEN",
 				updatedAt: "2026-06-04T18:10:00Z",
+			})
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "OPEN",
+				updatedAt: "2026-06-04T18:10:00Z",
 				comments: [],
 				reviews: [],
 			})
-			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
 			.mockResolvedValueOnce({ login: "ano333333" });
 
 		const handler = createPrMonitorHandler(repoRoot, activeDir);
@@ -401,6 +412,12 @@ describe("commit/pr handlers", () => {
 				url: "https://github.com/owner/repo/pull/123",
 				state: "OPEN",
 				updatedAt: "2026-06-04T18:10:00Z",
+			})
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "OPEN",
+				updatedAt: "2026-06-04T18:10:00Z",
 				comments: [
 					{
 						author: { login: "teammate" },
@@ -411,7 +428,6 @@ describe("commit/pr handlers", () => {
 				],
 				reviews: [],
 			})
-			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
 			.mockResolvedValueOnce({ login: "ano333333" });
 
 		const handler = createPrMonitorHandler(repoRoot, activeDir);

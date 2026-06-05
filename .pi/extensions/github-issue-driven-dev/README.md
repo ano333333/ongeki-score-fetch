@@ -38,6 +38,7 @@ GitHub issue を起点に、plan 作成 → 実装 → formatter/linter/test →
 12. `create-pr`
 13. `monitor-pr`
 14. `wait-pr-monitor`
+15. `pr-user-confirm`
 
 ## 状態遷移図
 
@@ -69,7 +70,9 @@ stateDiagram-v2
     monitor_pr --> address_review: error
     monitor_pr --> wait_pr_monitor: success
     wait_pr_monitor --> monitor_pr: error
-    wait_pr_monitor --> [*]: success
+    wait_pr_monitor --> pr_user_confirm: success
+    pr_user_confirm --> monitor_pr: manualOrAgent
+    pr_user_confirm --> implement: manualOrAgent
 ```
 
 ## 各 state の役割

@@ -42,8 +42,8 @@ export async function runCommandStreaming(command: string, cwd: string, options:
 			stderr += chunk;
 			options.onStderr?.(chunk);
 		});
-		proc.on("close", (code) => {
-			resolve({ exitCode: code ?? 0, stdout, stderr });
+		proc.on("close", (code, signal) => {
+			resolve({ exitCode: code ?? (signal ? 128 : 0), stdout, stderr, signal });
 		});
 		proc.on("error", (error) => {
 			resolve({ exitCode: 1, stdout, stderr: `${stderr}${error.message}` });

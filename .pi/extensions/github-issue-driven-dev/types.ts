@@ -90,6 +90,7 @@ export type CommandResult = {
 	exitCode: number;
 	stdout: string;
 	stderr: string;
+	signal?: NodeJS.Signals | null;
 };
 
 export type AgentConfig = {

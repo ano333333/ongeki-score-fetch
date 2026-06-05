@@ -31,6 +31,28 @@ export function createSelectIssueHandler(pi: ExtensionAPI, repoRoot: string, act
 		const parsedRequest = parseSelectionRequest(requestText);
 		await writeText(repoPath(repoRoot, SELECTION_REQUEST_PATH), formatSelectionRequestMarkdown(requestText));
 		await writeText(repoPath(repoRoot, ISSUE_CANDIDATES_PATH), formatIssueCandidatesMarkdown(repo, issues));
+		if (issues.length === 0) {
+			await saveMeta(repoRoot, {
+				workflowId: WORKFLOW_ID,
+				repo,
+				selectedAt: null,
+				issueNumber: null,
+				issueTitle: null,
+				issueUrl: null,
+				reviewAgent: DEFAULT_CONFIG.reviewAgent,
+				commitAgent: DEFAULT_CONFIG.commitAgent,
+				prAgent: DEFAULT_CONFIG.prAgent,
+				prMonitorAgent: DEFAULT_CONFIG.prMonitorAgent,
+				selectionRequestedAt: new Date().toISOString(),
+				selectionRequest: requestText || null,
+				selectionRequestedIssueNumber: parsedRequest.explicitIssueNumber,
+				selectionOverridesDefaultCriteria: parsedRequest.overridesDefaultCriteria,
+				selectionRequestPath: SELECTION_REQUEST_PATH,
+				issueCandidatesPath: ISSUE_CANDIDATES_PATH,
+			});
+			await writeText(pendingRequestPath, "");
+			throw new Error(`no open issues found for ${repo}`);
+		}
 		await saveMeta(repoRoot, {
 			workflowId: WORKFLOW_ID,
 			repo,

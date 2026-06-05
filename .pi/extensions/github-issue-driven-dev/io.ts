@@ -22,8 +22,11 @@ export async function writeJson(filePath: string, value: unknown): Promise<void>
 export async function readJson<T>(filePath: string): Promise<T | null> {
 	try {
 		return JSON.parse(await fs.promises.readFile(filePath, "utf8")) as T;
-	} catch {
-		return null;
+	} catch (error) {
+		if (typeof error === "object" && error && "code" in error && error.code === "ENOENT") {
+			return null;
+		}
+		throw error;
 	}
 }
 

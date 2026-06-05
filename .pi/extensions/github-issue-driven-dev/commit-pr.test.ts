@@ -48,8 +48,9 @@ describe("commit/pr handlers", () => {
 		vi.clearAllMocks();
 	});
 
-	it("pushes the current branch when metadata already has a PR URL", async () => {
+	it("pushes the current branch when metadata already has an open PR URL", async () => {
 		loadMetaMock.mockResolvedValue({ prUrl: "https://github.com/owner/repo/pull/123" });
+		runGhJsonMock.mockResolvedValueOnce({ url: "https://github.com/owner/repo/pull/123", state: "OPEN", mergedAt: null });
 		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "feature/test\n", stderr: "" });
 		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "", stderr: "" });
 
@@ -73,9 +74,31 @@ describe("commit/pr handlers", () => {
 		);
 	});
 
-	it("pushes the current branch when gh detects an existing PR", async () => {
+	it("does not reuse a closed PR URL from metadata and creates a new PR when no open PR exists", async () => {
+		loadMetaMock.mockResolvedValue({ prUrl: "https://github.com/owner/repo/pull/123" });
+		runGhJsonMock
+			.mockResolvedValueOnce({ url: "https://github.com/owner/repo/pull/123", state: "CLOSED", mergedAt: null })
+			.mockResolvedValueOnce([]);
+		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "feature/new\n", stderr: "" });
+		runDelegatedAgentMock.mockResolvedValue("PR_URL: https://github.com/owner/repo/pull/124\n");
+
+		const handler = createPrHandler(repoRoot, activeDir);
+		await expect(handler()).resolves.toEqual({
+			prPath: ".pi/workflows/github-issue-driven-dev/current/PR.md",
+			prUrl: "https://github.com/owner/repo/pull/124",
+		});
+		expect(runGhJsonMock).toHaveBeenNthCalledWith(
+			2,
+			["pr", "list", "--head", "feature/new", "--state", "open", "--json", "url", "--limit", "1"],
+			repoRoot,
+		);
+		expect(runDelegatedAgentMock).toHaveBeenCalled();
+	});
+
+	it("pushes the current branch when gh detects an existing open PR", async () => {
 		loadMetaMock.mockResolvedValue({});
-		runGhJsonMock.mockResolvedValueOnce({ url: "https://github.com/owner/repo/pull/123" });
+		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "feature/existing\n", stderr: "" });
+		runGhJsonMock.mockResolvedValueOnce([{ url: "https://github.com/owner/repo/pull/123" }]);
 		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "feature/existing\n", stderr: "" });
 		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "", stderr: "" });
 
@@ -86,9 +109,12 @@ describe("commit/pr handlers", () => {
 			skipped: true,
 			pushedBranch: "feature/existing",
 		});
-		expect(runGhJsonMock).toHaveBeenCalledWith(["pr", "view", "--json", "url"], repoRoot);
-		expect(runCommandMock).toHaveBeenNthCalledWith(1, "git branch --show-current", repoRoot);
-		expect(runCommandMock).toHaveBeenNthCalledWith(2, "git push", repoRoot);
+		expect(runGhJsonMock).toHaveBeenCalledWith(
+			["pr", "list", "--head", "feature/existing", "--state", "open", "--json", "url", "--limit", "1"],
+			repoRoot,
+		);
+		expect(runCommandMock).toHaveBeenNthCalledWith(2, "git branch --show-current", repoRoot);
+		expect(runCommandMock).toHaveBeenNthCalledWith(3, "git push", repoRoot);
 	});
 
 	it("stores pending monitor output and asks the wait state to retry", async () => {
@@ -101,7 +127,8 @@ describe("commit/pr handlers", () => {
 				comments: [],
 				reviews: [],
 			})
-			.mockResolvedValueOnce([{ name: "build", bucket: "pending", state: "IN_PROGRESS" }]);
+			.mockResolvedValueOnce([{ name: "build", bucket: "pending", state: "IN_PROGRESS" }])
+			.mockResolvedValueOnce({ login: "ano333333" });
 
 		const handler = createPrMonitorHandler(repoRoot, activeDir);
 		await expect(handler()).resolves.toEqual({
@@ -117,7 +144,46 @@ describe("commit/pr handlers", () => {
 		);
 	});
 
-	it("appends a rejected review when comments changed after workflow completion", async () => {
+	it("replies to new CodeRabbit comments after checks complete and moves to user confirm", async () => {
+		loadMetaMock.mockResolvedValue({
+			prUrl: "https://github.com/owner/repo/pull/123",
+			prPendingCommentFingerprint: "[]",
+		});
+		readTextIfExistsMock.mockResolvedValue("# Review History\n\n## Review Round 1\n\nREVIEW: ACCEPTED\n\n## Summary\n- fixed\n");
+		runGhJsonMock
+			.mockResolvedValueOnce({
+				url: "https://github.com/owner/repo/pull/123",
+				state: "OPEN",
+				updatedAt: "2026-06-04T18:10:00Z",
+				comments: [
+					{
+						author: { login: "coderabbitai" },
+						body: "please explain the fix",
+						updatedAt: "2026-06-04T18:09:00Z",
+						url: "https://github.com/comment/1",
+					},
+				],
+				reviews: [],
+			})
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({ login: "ano333333" });
+		runCommandMock.mockResolvedValueOnce({ exitCode: 0, stdout: "", stderr: "" });
+
+		const handler = createPrMonitorHandler(repoRoot, activeDir);
+		await expect(handler()).resolves.toEqual({
+			prMonitorPath: PR_MONITOR_PATH,
+			disposition: "OK",
+			nextAction: "USER_CONFIRM",
+			prUrl: "https://github.com/owner/repo/pull/123",
+		});
+		expect(runCommandMock).toHaveBeenCalledWith(
+			expect.stringContaining('gh "pr" "comment" "https://github.com/owner/repo/pull/123" "--body-file" "$tmp_file"'),
+			repoRoot,
+		);
+		expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining(PR_MONITOR_PATH), expect.stringContaining("返信しました"));
+	});
+
+	it("appends a rejected review when non-bot review feedback changed after workflow completion", async () => {
 		loadMetaMock.mockResolvedValue({
 			prUrl: "https://github.com/owner/repo/pull/123",
 			prPendingCommentFingerprint: "[]",
@@ -128,10 +194,11 @@ describe("commit/pr handlers", () => {
 				url: "https://github.com/owner/repo/pull/123",
 				state: "OPEN",
 				updatedAt: "2026-06-04T18:10:00Z",
-				comments: [{ author: { login: "coderabbit" }, body: "please fix this", updatedAt: "2026-06-04T18:09:00Z" }],
-				reviews: [],
+				comments: [],
+				reviews: [{ author: { login: "reviewer" }, body: "please fix this", state: "COMMENTED", updatedAt: "2026-06-04T18:09:00Z" }],
 			})
-			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }]);
+			.mockResolvedValueOnce([{ name: "build", bucket: "pass", state: "SUCCESS" }])
+			.mockResolvedValueOnce({ login: "ano333333" });
 
 		const handler = createPrMonitorHandler(repoRoot, activeDir);
 		await expect(handler()).rejects.toThrow(`pr monitor detected new review comments: see ${REVIEW_FILE_PATH}`);
@@ -143,12 +210,21 @@ describe("commit/pr handlers", () => {
 		);
 	});
 
-	it("wait handler notifies user when workflow is ready for manual confirmation", async () => {
+	it("wait handler notifies user when PR is merged", async () => {
+		const sendUserMessage = vi.fn();
+		loadMetaMock.mockResolvedValue({ prMonitorNextAction: "COMPLETED" });
+
+		const handler = createPrMonitorWaitHandler({ sendUserMessage } as never, repoRoot);
+		await expect(handler()).resolves.toEqual({ nextAction: "COMPLETED" });
+		expect(sendUserMessage).toHaveBeenCalledWith(expect.stringContaining(PR_MONITOR_PATH), { deliverAs: "followUp" });
+	});
+
+	it("wait handler resolves on user confirm without sending an extra follow-up", async () => {
 		const sendUserMessage = vi.fn();
 		loadMetaMock.mockResolvedValue({ prMonitorNextAction: "USER_CONFIRM" });
 
 		const handler = createPrMonitorWaitHandler({ sendUserMessage } as never, repoRoot);
 		await expect(handler()).resolves.toEqual({ nextAction: "USER_CONFIRM" });
-		expect(sendUserMessage).toHaveBeenCalledWith(expect.stringContaining(PR_MONITOR_PATH), { deliverAs: "followUp" });
+		expect(sendUserMessage).not.toHaveBeenCalled();
 	});
 });

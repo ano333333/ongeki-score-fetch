@@ -54,6 +54,17 @@ type PrCheck = {
 
 type PrMonitorNextAction = "WAIT" | "USER_CONFIRM" | "COMPLETED" | "REVIEW_REJECTED";
 
+type FingerprintItem = {
+	kind: "comment" | "review";
+	author: string;
+	body: string;
+	createdAt?: string;
+	updatedAt?: string;
+	url?: string;
+	state?: string;
+	submittedAt?: string;
+};
+
 function createChecksSummary(checks: PrCheck[]): string {
 	if (checks.length === 0) return "- no checks found";
 	return checks
@@ -65,10 +76,10 @@ function createChecksSummary(checks: PrCheck[]): string {
 		.join("\n");
 }
 
-function commentFingerprint(pr: PullRequestView): string {
-	const items = [
+function fingerprintItems(pr: PullRequestView): FingerprintItem[] {
+	return [
 		...(pr.comments ?? []).map((comment) => ({
-			kind: "comment",
+			kind: "comment" as const,
 			author: comment.author?.login ?? "",
 			body: comment.body ?? "",
 			createdAt: comment.createdAt ?? "",
@@ -76,7 +87,7 @@ function commentFingerprint(pr: PullRequestView): string {
 			url: comment.url ?? "",
 		})),
 		...(pr.reviews ?? []).map((review) => ({
-			kind: "review",
+			kind: "review" as const,
 			author: review.author?.login ?? "",
 			body: review.body ?? "",
 			state: review.state ?? "",
@@ -85,7 +96,25 @@ function commentFingerprint(pr: PullRequestView): string {
 			url: review.url ?? "",
 		})),
 	];
-	return JSON.stringify(items);
+}
+
+function commentFingerprint(pr: PullRequestView): string {
+	return JSON.stringify(fingerprintItems(pr));
+}
+
+function parseFingerprint(value: unknown): FingerprintItem[] {
+	if (typeof value !== "string" || !value.trim()) return [];
+	try {
+		const parsed = JSON.parse(value);
+		return Array.isArray(parsed) ? (parsed as FingerprintItem[]) : [];
+	} catch {
+		return [];
+	}
+}
+
+function diffFingerprintItems(previous: FingerprintItem[], current: FingerprintItem[]): FingerprintItem[] {
+	const known = new Set(previous.map((item) => JSON.stringify(item)));
+	return current.filter((item) => !known.has(JSON.stringify(item)));
 }
 
 function countReviewRounds(reviewHistory: string): number {
@@ -134,13 +163,17 @@ function createPrMonitorMarkdown(pr: PullRequestView, checks: PrCheck[], nextAct
 	].join("\n");
 }
 
-async function pushCurrentBranch(repoRoot: string): Promise<string> {
+async function getCurrentBranch(repoRoot: string): Promise<string> {
 	const branchResult = await runCommand("git branch --show-current", repoRoot);
 	const branch = branchResult.stdout.trim();
 	if (branchResult.exitCode !== 0 || !branch) {
 		throw new Error(branchResult.stderr || "failed to determine current branch for push");
 	}
+	return branch;
+}
 
+async function pushCurrentBranch(repoRoot: string): Promise<string> {
+	const branch = await getCurrentBranch(repoRoot);
 	const pushResult = await runCommand("git push", repoRoot);
 	if (pushResult.exitCode === 0) return branch;
 
@@ -149,6 +182,19 @@ async function pushCurrentBranch(repoRoot: string): Promise<string> {
 		throw new Error(fallbackResult.stderr || pushResult.stderr || `failed to push branch ${branch}`);
 	}
 	return branch;
+}
+
+async function findOpenPrForCurrentBranch(repoRoot: string): Promise<string | null> {
+	const branch = await getCurrentBranch(repoRoot);
+	const prs = await runGhJson<Array<{ url?: string | null }>>(
+		["pr", "list", "--head", branch, "--state", "open", "--json", "url", "--limit", "1"],
+		repoRoot,
+	);
+	return prs[0]?.url ?? null;
+}
+
+function isOpenPr(pr: { state?: string | null; mergedAt?: string | null }): boolean {
+	return pr.state === "OPEN" && !pr.mergedAt;
 }
 
 async function appendRejectedReviewFromPr(repoRoot: string, pr: PullRequestView): Promise<void> {
@@ -172,6 +218,90 @@ async function appendRejectedReviewFromPr(repoRoot: string, pr: PullRequestView)
 		? `${reviewHistory.trimEnd()}\n\n## Review Round ${reviewRound}\n\n${rejectionBody}\n`
 		: `# Review History\n\n## Review Round ${reviewRound}\n\n${rejectionBody}\n`;
 	await writeText(reviewFilePath, nextEntry);
+}
+
+function isCodeRabbitLikeAuthor(author: string): boolean {
+	return author.toLowerCase().includes("coderabbit");
+}
+
+function createReplyMarker(source: FingerprintItem): string {
+	return `<!-- pi-pr-monitor-reply:${source.url ?? source.updatedAt ?? source.body.slice(0, 80)} -->`;
+}
+
+function hasExistingReplyFromViewer(pr: PullRequestView, viewerLogin: string, source: FingerprintItem): boolean {
+	const marker = createReplyMarker(source);
+	return (pr.comments ?? []).some((comment) => (comment.author?.login ?? "") === viewerLogin && (comment.body ?? "").includes(marker));
+}
+
+function extractLatestReviewRound(reviewHistory: string): string {
+	const sections = reviewHistory
+		.split(/^## Review Round /gm)
+		.map((section) => section.trim())
+		.filter(Boolean);
+	const latest = sections.at(-1);
+	return latest ? `## Review Round ${latest}`.trim() : "";
+}
+
+function createAutoReplyBody(source: FingerprintItem, reviewHistory: string): string {
+	const latestRound = extractLatestReviewRound(reviewHistory);
+	const sourceSummary = source.body.trim() ? source.body.trim() : "(comment body omitted)";
+	const reviewSummary = latestRound ? latestRound.slice(0, 3000).trim() : "レビュー履歴に基づき、必要な対応は実施済みです。";
+	return [
+		createReplyMarker(source),
+		"対応しました。レビュー履歴に沿って確認・修正済みです。再確認をお願いします。",
+		"",
+		`対象コメント: ${sourceSummary}`,
+		"",
+		"参考: 最新の review markdown 要約",
+		"```md",
+		reviewSummary,
+		"```",
+	].join("\n");
+}
+
+async function postPrComment(repoRoot: string, prUrl: string, body: string): Promise<void> {
+	const heredoc = "__PI_PR_MONITOR_COMMENT__";
+	const command = [
+		'tmp_file="$(mktemp)"',
+		`cat <<'${heredoc}' > "$tmp_file"`,
+		body,
+		heredoc,
+		`gh ${["pr", "comment", prUrl, "--body-file", "$tmp_file"].map((arg) => JSON.stringify(arg)).join(" ")}`,
+		"status=$?",
+		'rm -f "$tmp_file"',
+		"exit $status",
+	].join("\n");
+	const result = await runCommand(command, repoRoot);
+	if (result.exitCode !== 0) {
+		throw new Error(result.stderr || `failed to post comment to ${prUrl}`);
+	}
+}
+
+async function getViewerLogin(repoRoot: string): Promise<string> {
+	const viewer = await runGhJson<{ login?: string | null }>(["api", "user"], repoRoot);
+	return viewer.login ?? "";
+}
+
+function collectAutoReplyTargets(pr: PullRequestView, previousItems: FingerprintItem[], viewerLogin: string): FingerprintItem[] {
+	const changedItems = diffFingerprintItems(previousItems, fingerprintItems(pr));
+	return changedItems.filter((item) => {
+		if (item.kind !== "comment") return false;
+		if (!item.body.trim()) return false;
+		if (!isCodeRabbitLikeAuthor(item.author)) return false;
+		if (item.author === viewerLogin) return false;
+		if (hasExistingReplyFromViewer(pr, viewerLogin, item)) return false;
+		return true;
+	});
+}
+
+function hasUnhandledReviewFeedback(changedItems: FingerprintItem[], autoReplyTargets: FingerprintItem[], viewerLogin: string): boolean {
+	const autoReplyKeys = new Set(autoReplyTargets.map((item) => JSON.stringify(item)));
+	return changedItems.some((item) => {
+		if (item.author === viewerLogin) return false;
+		if (item.kind === "review") return true;
+		if (item.kind === "comment") return !autoReplyKeys.has(JSON.stringify(item));
+		return false;
+	});
 }
 
 export function createCommitHandler(repoRoot: string, activeDir: string) {
@@ -199,40 +329,46 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 		const meta = await loadMeta(repoRoot);
 		const existingMetaUrl = typeof meta.prUrl === "string" && meta.prUrl ? meta.prUrl : null;
 		if (existingMetaUrl) {
+			try {
+				const existingMetaPr = await runGhJson<{ url: string; state?: string | null; mergedAt?: string | null }>(
+					["pr", "view", existingMetaUrl, "--json", "url,state,mergedAt"],
+					repoRoot,
+				);
+				if (isOpenPr(existingMetaPr)) {
+					const pushedBranch = await pushCurrentBranch(repoRoot);
+					await writeText(
+						repoPath(repoRoot, PR_PATH),
+						`PR_URL: ${existingMetaUrl}\n\n既存の PR を metadata から再利用し、branch ${pushedBranch} を push しました。\n`,
+					);
+					await saveMeta(repoRoot, {
+						prUrl: existingMetaUrl,
+						prSkippedAt: new Date().toISOString(),
+						prPushedAt: new Date().toISOString(),
+						prPushedBranch: pushedBranch,
+						prAgent: DEFAULT_CONFIG.prAgent,
+					});
+					return { prPath: PR_PATH, prUrl: existingMetaUrl, skipped: true, pushedBranch };
+				}
+			} catch {
+				// fall through and search/create an open PR
+			}
+		}
+
+		const existingBranchPrUrl = await findOpenPrForCurrentBranch(repoRoot).catch(() => null);
+		if (existingBranchPrUrl) {
 			const pushedBranch = await pushCurrentBranch(repoRoot);
 			await writeText(
 				repoPath(repoRoot, PR_PATH),
-				`PR_URL: ${existingMetaUrl}\n\n既存の PR を metadata から再利用し、branch ${pushedBranch} を push しました。\n`,
+				`PR_URL: ${existingBranchPrUrl}\n\n既存の open PR を再利用し、branch ${pushedBranch} を push しました。\n`,
 			);
 			await saveMeta(repoRoot, {
-				prUrl: existingMetaUrl,
+				prUrl: existingBranchPrUrl,
 				prSkippedAt: new Date().toISOString(),
 				prPushedAt: new Date().toISOString(),
 				prPushedBranch: pushedBranch,
 				prAgent: DEFAULT_CONFIG.prAgent,
 			});
-			return { prPath: PR_PATH, prUrl: existingMetaUrl, skipped: true, pushedBranch };
-		}
-
-		try {
-			const existingPr = await runGhJson<{ url: string }>(["pr", "view", "--json", "url"], repoRoot);
-			if (existingPr.url) {
-				const pushedBranch = await pushCurrentBranch(repoRoot);
-				await writeText(
-					repoPath(repoRoot, PR_PATH),
-					`PR_URL: ${existingPr.url}\n\n既存の PR を再利用し、branch ${pushedBranch} を push しました。\n`,
-				);
-				await saveMeta(repoRoot, {
-					prUrl: existingPr.url,
-					prSkippedAt: new Date().toISOString(),
-					prPushedAt: new Date().toISOString(),
-					prPushedBranch: pushedBranch,
-					prAgent: DEFAULT_CONFIG.prAgent,
-				});
-				return { prPath: PR_PATH, prUrl: existingPr.url, skipped: true, pushedBranch };
-			}
-		} catch {
-			// no existing PR for this branch; create one below
+			return { prPath: PR_PATH, prUrl: existingBranchPrUrl, skipped: true, pushedBranch };
 		}
 
 		const prText = await runDelegatedAgent(
@@ -277,7 +413,10 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 		);
 		const fingerprint = commentFingerprint(pr);
 		const allChecksComplete = checks.every((check) => (check.bucket ?? "pass") !== "pending");
-		const pendingFingerprint = typeof meta.prPendingCommentFingerprint === "string" ? meta.prPendingCommentFingerprint : null;
+		const previousItems = parseFingerprint(meta.prPendingCommentFingerprint);
+		const viewerLogin = await getViewerLogin(repoRoot);
+		const changedItems = diffFingerprintItems(previousItems, fingerprintItems(pr));
+		const autoReplyTargets = collectAutoReplyTargets(pr, previousItems, viewerLogin);
 		const basePatch = {
 			prMonitorAgent: DEFAULT_CONFIG.prMonitorAgent,
 			prMonitoredAt: new Date().toISOString(),
@@ -308,7 +447,28 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			return { prMonitorPath: PR_MONITOR_PATH, disposition: "PENDING", nextAction: "WAIT", prUrl };
 		}
 
-		if (pendingFingerprint && pendingFingerprint !== fingerprint) {
+		if (autoReplyTargets.length > 0) {
+			const reviewHistory = await readTextIfExists(repoPath(repoRoot, REVIEW_FILE_PATH));
+			for (const target of autoReplyTargets) {
+				await postPrComment(repoRoot, prUrl, createAutoReplyBody(target, reviewHistory));
+			}
+			const monitorText = createPrMonitorMarkdown(
+				pr,
+				checks,
+				"USER_CONFIRM",
+				`${autoReplyTargets.length} 件のコメントに review markdown を参照して返信しました。ユーザー確認待ちです。`,
+			);
+			await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
+			await saveMeta(repoRoot, {
+				...basePatch,
+				prMonitorDisposition: "OK",
+				prMonitorNextAction: "USER_CONFIRM",
+				prWorkflowCompletedAt: typeof meta.prWorkflowCompletedAt === "string" ? meta.prWorkflowCompletedAt : new Date().toISOString(),
+			});
+			return { prMonitorPath: PR_MONITOR_PATH, disposition: "OK", nextAction: "USER_CONFIRM", prUrl };
+		}
+
+		if (hasUnhandledReviewFeedback(changedItems, autoReplyTargets, viewerLogin)) {
 			await appendRejectedReviewFromPr(repoRoot, pr);
 			const monitorText = createPrMonitorMarkdown(
 				pr,
@@ -331,7 +491,7 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			pr,
 			checks,
 			"USER_CONFIRM",
-			"workflow は完了しており、workflow 完了前からコメント変化もないため、ユーザー確認待ちです。",
+			"workflow は完了しており、必要なコメント対応も完了しているため、ユーザー確認待ちです。",
 		);
 		await writeText(repoPath(repoRoot, PR_MONITOR_PATH), `${monitorText.trimEnd()}\n`);
 		await saveMeta(repoRoot, {
@@ -353,17 +513,10 @@ export function createPrMonitorWaitHandler(pi: ExtensionAPI, repoRoot: string) {
 			throw new Error("retry pr monitor after wait");
 		}
 		if (nextAction === "COMPLETED") {
-			pi.sendUserMessage("GitHub issue driven dev workflow: PR は merge 済みです。workflow は完了しました。", {
-				deliverAs: "followUp",
-			});
-			return { nextAction };
-		}
-		if (nextAction === "USER_CONFIRM") {
 			pi.sendUserMessage(
 				[
-					"GitHub issue driven dev workflow: PR の workflow は完了しています。",
-					`${PR_MONITOR_PATH} を読み、PR の最終状態を確認してください。`,
-					"コメント変化は検出されていないため、ここから先はユーザー確認待ちです。",
+					"GitHub issue driven dev workflow: PR は merge 済みです。",
+					`${PR_MONITOR_PATH} を確認し、必要なら PR 状態を再確認してください。`,
 				].join("\n"),
 				{ deliverAs: "followUp" },
 			);

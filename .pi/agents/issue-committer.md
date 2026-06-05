@@ -16,6 +16,7 @@ bash を使って git 状態の確認、stage、commit 作成を行って構い�
 - commit message は明確にすること。
 - PR は作成しないこと。
 - history を書き換えないこと。
+- 不要ファイル・一時ファイル・意図しない生成物を盲目的に commit しないこと。
 
 最終出力要件:
 - `COMMITS:` 見出しを含めること。

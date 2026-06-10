@@ -12,7 +12,6 @@ vi.mock("./io.ts", () => ({
 	readTextIfExists: vi.fn(),
 	readJson: vi.fn(),
 	writeJson: vi.fn(),
-	listReviewFiles: vi.fn(),
 }));
 
 vi.mock("./meta.ts", () => ({

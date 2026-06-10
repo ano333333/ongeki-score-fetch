@@ -37,15 +37,3 @@ export async function readTextIfExists(filePath: string): Promise<string> {
 		return "";
 	}
 }
-
-export async function listReviewFiles(dirPath: string): Promise<string[]> {
-	try {
-		const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-		return entries
-			.filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-			.map((entry) => path.join(dirPath, entry.name))
-			.sort();
-	} catch {
-		return [];
-	}
-}

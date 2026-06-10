@@ -1,4 +1,4 @@
-import { FORMATTER_LOG_PATH, ISSUE_PATH, PLAN_PATH, PR_MONITOR_PATH, SELECTION_PATH, WORKFLOW_ID } from "./constants.ts";
+import { ISSUE_PATH, PLAN_PATH, PR_MONITOR_PATH, SELECTION_PATH, WORKFLOW_ID } from "./constants.ts";
 import type { ClientWorkflowDefinition } from "./types.ts";
 
 export const workflowDefinition: ClientWorkflowDefinition = {

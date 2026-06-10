@@ -20,8 +20,6 @@ export type WorkflowTransition = {
 	to: string;
 	trigger: "success" | "error" | "always" | "manual" | "manualOrAgent";
 	label?: string;
-	guard?: string;
-	priority?: number;
 };
 
 export type ClientWorkflowDefinition = {

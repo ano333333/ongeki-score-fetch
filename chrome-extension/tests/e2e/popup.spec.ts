@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Papa from "papaparse";
-import { Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { test, expect, e2eDownloadDir } from "./fixtures";
 
 const __filename = fileURLToPath(import.meta.url);

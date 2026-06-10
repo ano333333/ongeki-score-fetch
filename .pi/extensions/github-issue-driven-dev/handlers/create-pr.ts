@@ -9,6 +9,22 @@ import { runDelegatedAgent } from "../subagent.ts";
 
 export function createPrHandler(repoRoot: string, activeDir: string) {
 	return async () => {
+		const reuseExistingPr = async (prUrl: string, reason: string) => {
+			const pushedBranch = await pushCurrentBranch(repoRoot);
+			await writeText(repoPath(repoRoot, PR_PATH), `PR_URL: ${prUrl}\n\n${reason}branch ${pushedBranch} を push しました。\n`);
+			await saveMeta(repoRoot, {
+				prUrl,
+				prSkippedAt: new Date().toISOString(),
+				prPushedAt: new Date().toISOString(),
+				prPushedBranch: pushedBranch,
+				prWorkflowCompletedAt: null,
+				prMonitorDisposition: undefined,
+				prMonitorNextAction: undefined,
+				prAgent: DEFAULT_CONFIG.prAgent,
+			});
+			return { prPath: PR_PATH, prUrl, skipped: true, pushedBranch };
+		};
+
 		const meta = await loadMeta(repoRoot);
 		const existingMetaUrl = typeof meta.prUrl === "string" && meta.prUrl ? meta.prUrl : null;
 		if (existingMetaUrl) {
@@ -18,22 +34,7 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 					repoRoot,
 				);
 				if (isOpenPr(existingMetaPr)) {
-					const pushedBranch = await pushCurrentBranch(repoRoot);
-					await writeText(
-						repoPath(repoRoot, PR_PATH),
-						`PR_URL: ${existingMetaUrl}\n\n既存の PR を metadata から再利用し、branch ${pushedBranch} を push しました。\n`,
-					);
-					await saveMeta(repoRoot, {
-						prUrl: existingMetaUrl,
-						prSkippedAt: new Date().toISOString(),
-						prPushedAt: new Date().toISOString(),
-						prPushedBranch: pushedBranch,
-						prWorkflowCompletedAt: null,
-						prMonitorDisposition: undefined,
-						prMonitorNextAction: undefined,
-						prAgent: DEFAULT_CONFIG.prAgent,
-					});
-					return { prPath: PR_PATH, prUrl: existingMetaUrl, skipped: true, pushedBranch };
+					return await reuseExistingPr(existingMetaUrl, "既存の PR を metadata から再利用し、");
 				}
 				await saveMeta(repoRoot, {
 					prUrl: null,
@@ -47,22 +48,7 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 
 		const existingBranchPrUrl = await findOpenPrForCurrentBranch(repoRoot).catch(() => null);
 		if (existingBranchPrUrl) {
-			const pushedBranch = await pushCurrentBranch(repoRoot);
-			await writeText(
-				repoPath(repoRoot, PR_PATH),
-				`PR_URL: ${existingBranchPrUrl}\n\n既存の open PR を再利用し、branch ${pushedBranch} を push しました。\n`,
-			);
-			await saveMeta(repoRoot, {
-				prUrl: existingBranchPrUrl,
-				prSkippedAt: new Date().toISOString(),
-				prPushedAt: new Date().toISOString(),
-				prPushedBranch: pushedBranch,
-				prWorkflowCompletedAt: null,
-				prMonitorDisposition: undefined,
-				prMonitorNextAction: undefined,
-				prAgent: DEFAULT_CONFIG.prAgent,
-			});
-			return { prPath: PR_PATH, prUrl: existingBranchPrUrl, skipped: true, pushedBranch };
+			return await reuseExistingPr(existingBranchPrUrl, "既存の open PR を再利用し、");
 		}
 
 		const prText = await runDelegatedAgent(

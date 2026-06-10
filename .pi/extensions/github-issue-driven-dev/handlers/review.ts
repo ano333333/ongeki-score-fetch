@@ -3,26 +3,16 @@ import { ensureDir, readTextIfExists, writeText } from "../io.ts";
 import type { LatestReviewDisposition } from "../meta.ts";
 import { saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
+import { appendReviewRound, detectLatestReviewDisposition } from "../review-history.ts";
 import { runDelegatedAgent } from "../subagent.ts";
+import { WorkflowErrorTransition } from "../workflow-transition.ts";
 import { summarizeWorkingTreeStatus } from "../working-tree.ts";
-
-function countReviewRounds(reviewHistory: string): number {
-	return (reviewHistory.match(/^## Review Round /gm) ?? []).length;
-}
-
-function detectLatestReviewDisposition(reviewText: string): LatestReviewDisposition {
-	const matches = Array.from(reviewText.matchAll(/REVIEW:\s*(ACCEPTED|REJECTED)/gim));
-	const last = matches.at(-1)?.[1]?.toUpperCase();
-	if (last === "ACCEPTED" || last === "REJECTED") return last;
-	return "UNKNOWN";
-}
 
 export function createReviewHandler(repoRoot: string, activeDir: string, reviewsDir: string) {
 	return async () => {
 		await ensureDir(reviewsDir);
 		const reviewFilePath = repoPath(repoRoot, REVIEW_FILE_PATH);
 		const reviewHistory = await readTextIfExists(reviewFilePath);
-		const reviewRound = countReviewRounds(reviewHistory) + 1;
 		const workTreeSummary = await summarizeWorkingTreeStatus(repoRoot);
 		const reviewText = await runDelegatedAgent(
 			repoRoot,
@@ -44,18 +34,16 @@ export function createReviewHandler(repoRoot: string, activeDir: string, reviews
 				"REVIEW: REJECTED",
 			].join("\n\n"),
 		);
-		const reviewEntry = reviewHistory.trim()
-			? `${reviewHistory.trimEnd()}\n\n## Review Round ${reviewRound}\n\n${reviewText.trimEnd()}\n`
-			: `# Review History\n\n## Review Round ${reviewRound}\n\n${reviewText.trimEnd()}\n`;
+		const reviewEntry = appendReviewRound(reviewHistory, reviewText);
 		await writeText(reviewFilePath, reviewEntry);
-		const disposition = detectLatestReviewDisposition(reviewText);
+		const disposition: LatestReviewDisposition = detectLatestReviewDisposition(reviewText) ?? "UNKNOWN";
 		await saveMeta(repoRoot, {
 			latestReviewFile: REVIEW_FILE_PATH,
 			latestReviewDisposition: disposition,
 			reviewAgent: DEFAULT_CONFIG.reviewAgent,
 			reviewUpdatedAt: new Date().toISOString(),
 		});
-		if (disposition !== "ACCEPTED") throw new Error(`review rejected: see ${REVIEW_FILE_PATH}`);
+		if (disposition !== "ACCEPTED") throw new WorkflowErrorTransition(`review rejected: see ${REVIEW_FILE_PATH}`);
 		return { reviewFile: REVIEW_FILE_PATH };
 	};
 }

@@ -1,4 +1,5 @@
 import { runCommand, runGhJson } from "../command.ts";
+import { extractLatestReviewRound } from "../review-history.ts";
 import type { FingerprintItem } from "./fingerprint.ts";
 import { diffFingerprintItems, fingerprintItems } from "./fingerprint.ts";
 import type { PullRequestView } from "./view.ts";
@@ -14,15 +15,6 @@ export function createReplyMarker(source: FingerprintItem): string {
 export function hasExistingReplyFromViewer(pr: PullRequestView, viewerLogin: string, source: FingerprintItem): boolean {
 	const marker = createReplyMarker(source);
 	return (pr.comments ?? []).some((comment) => (comment.author?.login ?? "") === viewerLogin && (comment.body ?? "").includes(marker));
-}
-
-export function extractLatestReviewRound(reviewHistory: string): string {
-	const sections = reviewHistory
-		.split(/^## Review Round /gm)
-		.map((section) => section.trim())
-		.filter(Boolean);
-	const latest = sections.at(-1);
-	return latest ? `## Review Round ${latest}`.trim() : "";
 }
 
 export function createAutoReplyBody(source: FingerprintItem, reviewHistory: string): string {

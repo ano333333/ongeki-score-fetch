@@ -4,6 +4,7 @@ import { writeText } from "../io.ts";
 import { saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
 import type { CommandResult, WorkflowFunctionContext } from "../types.ts";
+import { WorkflowErrorTransition } from "../workflow-transition.ts";
 
 type VerificationTarget = {
 	label: string;
@@ -99,7 +100,7 @@ export function createLinterHandler(repoRoot: string) {
 	return async (_input: unknown, context?: WorkflowFunctionContext) => {
 		const result = await runTargetsAndLog(repoRoot, repoPath(repoRoot, LINTER_LOG_PATH), "linter", LINTER_TARGETS, context);
 		await saveMeta(repoRoot, { linterExitCode: result.exitCode, linterRanAt: new Date().toISOString() });
-		if (result.exitCode !== 0) throw new Error(`linter failed: see ${LINTER_LOG_PATH}`);
+		if (result.exitCode !== 0) throw new WorkflowErrorTransition(`linter failed: see ${LINTER_LOG_PATH}`);
 		return { logPath: LINTER_LOG_PATH };
 	};
 }
@@ -108,7 +109,7 @@ export function createTestHandler(repoRoot: string) {
 	return async (_input: unknown, context?: WorkflowFunctionContext) => {
 		const result = await runTargetsAndLog(repoRoot, repoPath(repoRoot, TEST_LOG_PATH), "test", TEST_TARGETS, context);
 		await saveMeta(repoRoot, { testExitCode: result.exitCode, testRanAt: new Date().toISOString() });
-		if (result.exitCode !== 0) throw new Error(`test failed: see ${TEST_LOG_PATH}`);
+		if (result.exitCode !== 0) throw new WorkflowErrorTransition(`test failed: see ${TEST_LOG_PATH}`);
 		return { logPath: TEST_LOG_PATH };
 	};
 }

@@ -11,7 +11,8 @@ import { judgePrFeedbackWithAgent } from "../pr/judgement.ts";
 import { createPrMonitorMarkdown, summarizeReviewFeedback } from "../pr/markdown.ts";
 import type { PrCheck, PullRequestStatusView, PullRequestView } from "../pr/view.ts";
 import { isClosedUnmergedPr, isPendingCheck } from "../pr/view.ts";
-
+import { appendReviewRound } from "../review-history.ts";
+import { WorkflowErrorTransition } from "../workflow-transition.ts";
 export function parseIsoTimestamp(value: unknown): number | null {
 	if (typeof value !== "string" || !value) return null;
 	const parsed = Date.parse(value);
@@ -34,15 +35,10 @@ export function hasCompletedCurrentPrCycle(meta: WorkflowMeta): boolean {
 	return completedAt >= latestCycleStartedAt;
 }
 
-export function countReviewRounds(reviewHistory: string): number {
-	return (reviewHistory.match(/^## Review Round /gm) ?? []).length;
-}
-
 export async function appendRejectedReviewFromPr(repoRoot: string, pr: PullRequestView): Promise<void> {
 	const reviewFilePath = repoPath(repoRoot, REVIEW_FILE_PATH);
 	await ensureDir(repoPath(repoRoot, REVIEW_FILE_PATH.split("/").slice(0, -1).join("/")));
 	const reviewHistory = await readTextIfExists(reviewFilePath);
-	const reviewRound = countReviewRounds(reviewHistory) + 1;
 	const rejectionBody = [
 		"## Scope checked",
 		"- PR comments / reviews after workflow completion",
@@ -55,9 +51,7 @@ export async function appendRejectedReviewFromPr(repoRoot: string, pr: PullReque
 		"",
 		"REVIEW: REJECTED",
 	].join("\n");
-	const nextEntry = reviewHistory.trim()
-		? `${reviewHistory.trimEnd()}\n\n## Review Round ${reviewRound}\n\n${rejectionBody}\n`
-		: `# Review History\n\n## Review Round ${reviewRound}\n\n${rejectionBody}\n`;
+	const nextEntry = appendReviewRound(reviewHistory, rejectionBody);
 	await writeText(reviewFilePath, nextEntry);
 }
 
@@ -112,7 +106,7 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 				prMonitorDisposition: "ACTION_REQUIRED",
 				prMonitorNextAction: "REVIEW_REJECTED",
 			});
-			throw new Error("pr monitor detected closed unmerged PR; open PR required");
+			throw new WorkflowErrorTransition("pr monitor detected closed unmerged PR; open PR required");
 		}
 
 		if (!currentCycleCompleted && !allChecksComplete) {
@@ -152,7 +146,7 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 					latestReviewFile: REVIEW_FILE_PATH,
 					latestReviewDisposition: "REJECTED",
 				});
-				throw new Error(`pr monitor detected new review comments: see ${REVIEW_FILE_PATH}`);
+				throw new WorkflowErrorTransition(`pr monitor detected new review comments: see ${REVIEW_FILE_PATH}`);
 			}
 
 			if (judgement.replyNeeded && autoReplyTargets.length > 0) {
@@ -202,7 +196,7 @@ export function createPrMonitorWaitHandler(pi: ExtensionAPI, repoRoot: string) {
 		const prUrl = meta.prUrl ?? null;
 		if (nextAction === "WAIT") {
 			await new Promise((resolve) => setTimeout(resolve, PR_MONITOR_WAIT_MS));
-			throw new Error("retry pr monitor after wait");
+			throw new WorkflowErrorTransition("retry pr monitor after wait");
 		}
 		if (nextAction === "COMPLETED") {
 			pi.sendUserMessage(

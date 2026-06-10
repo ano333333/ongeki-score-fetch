@@ -1,0 +1,30 @@
+{
+	"name": "ongeki-score-fetch-pi-extensions",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"packageManager": "pnpm@11.1.2",
+	"scripts": {
+		"format": "biome format --write .",
+		"lint": "biome lint .",
+		"check": "biome check .",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@earendil-works/pi-agent-core": "0.78.0",
+		"@earendil-works/pi-ai": "0.78.0",
+		"@earendil-works/pi-coding-agent": "0.78.0",
+		"@earendil-works/pi-tui": "0.78.0",
+		"typebox": "1.1.38"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.9.4",
+		"@types/node": "22.15.30",
+		"typescript": "5.8.3",
+		"vitest": "3.2.4"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": ["@biomejs/biome", "@google/genai", "protobufjs"]
+	}
+}

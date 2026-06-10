@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { runGhJson } from "../command.ts";
 import { DEFAULT_CONFIG, PR_MONITOR_PATH, PR_MONITOR_WAIT_MS, REVIEW_FILE_PATH } from "../constants.ts";
 import { ensureDir, readTextIfExists, writeText } from "../io.ts";
+import type { PrMonitorNextAction, WorkflowMeta } from "../meta.ts";
 import { loadMeta, saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
 import { collectAutoReplyTargets, createAutoReplyBody, getViewerLogin, postPrComment } from "../pr/auto-reply.ts";
@@ -11,17 +12,13 @@ import { createPrMonitorMarkdown, summarizeReviewFeedback } from "../pr/markdown
 import type { PrCheck, PullRequestStatusView, PullRequestView } from "../pr/view.ts";
 import { isClosedUnmergedPr, isPendingCheck } from "../pr/view.ts";
 
-export type PrMonitorNextAction = "WAIT" | "USER_CONFIRM" | "COMPLETED" | "REVIEW_REJECTED";
-
-export type MonitorMeta = Record<string, unknown>;
-
 export function parseIsoTimestamp(value: unknown): number | null {
 	if (typeof value !== "string" || !value) return null;
 	const parsed = Date.parse(value);
 	return Number.isNaN(parsed) ? null : parsed;
 }
 
-export function getLatestPrCycleStartedAt(meta: MonitorMeta): number | null {
+export function getLatestPrCycleStartedAt(meta: WorkflowMeta): number | null {
 	const candidates = [parseIsoTimestamp(meta.prCreatedAt), parseIsoTimestamp(meta.prPushedAt)].filter(
 		(value): value is number => value !== null,
 	);
@@ -29,7 +26,7 @@ export function getLatestPrCycleStartedAt(meta: MonitorMeta): number | null {
 	return Math.max(...candidates);
 }
 
-export function hasCompletedCurrentPrCycle(meta: MonitorMeta): boolean {
+export function hasCompletedCurrentPrCycle(meta: WorkflowMeta): boolean {
 	const completedAt = parseIsoTimestamp(meta.prWorkflowCompletedAt);
 	if (completedAt === null) return false;
 	const latestCycleStartedAt = getLatestPrCycleStartedAt(meta);
@@ -67,7 +64,7 @@ export async function appendRejectedReviewFromPr(repoRoot: string, pr: PullReque
 export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 	return async () => {
 		const meta = await loadMeta(repoRoot);
-		const prUrl = typeof meta.prUrl === "string" ? meta.prUrl : null;
+		const prUrl = meta.prUrl ?? null;
 		if (!prUrl) {
 			throw new Error("PR URL not found in metadata. Create the PR before monitoring it.");
 		}
@@ -174,7 +171,7 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 					prMonitorDisposition: "OK",
 					prMonitorNextAction: "USER_CONFIRM",
 					prPendingCommentFingerprint: fingerprint,
-					prWorkflowCompletedAt: typeof meta.prWorkflowCompletedAt === "string" ? meta.prWorkflowCompletedAt : new Date().toISOString(),
+					prWorkflowCompletedAt: meta.prWorkflowCompletedAt ?? new Date().toISOString(),
 				});
 				return { prMonitorPath: PR_MONITOR_PATH, disposition: "OK", nextAction: "USER_CONFIRM", prUrl };
 			}
@@ -192,7 +189,7 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 			prMonitorDisposition: checks.some((check) => ["fail", "cancel"].includes(check.bucket ?? "")) ? "ACTION_REQUIRED" : "OK",
 			prMonitorNextAction: "USER_CONFIRM",
 			prPendingCommentFingerprint: fingerprint,
-			prWorkflowCompletedAt: typeof meta.prWorkflowCompletedAt === "string" ? meta.prWorkflowCompletedAt : new Date().toISOString(),
+			prWorkflowCompletedAt: meta.prWorkflowCompletedAt ?? new Date().toISOString(),
 		});
 		return { prMonitorPath: PR_MONITOR_PATH, disposition: "OK", nextAction: "USER_CONFIRM", prUrl };
 	};
@@ -201,8 +198,8 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 export function createPrMonitorWaitHandler(pi: ExtensionAPI, repoRoot: string) {
 	return async () => {
 		const meta = await loadMeta(repoRoot);
-		const nextAction = typeof meta.prMonitorNextAction === "string" ? (meta.prMonitorNextAction as PrMonitorNextAction) : "WAIT";
-		const prUrl = typeof meta.prUrl === "string" && meta.prUrl ? meta.prUrl : null;
+		const nextAction: PrMonitorNextAction = meta.prMonitorNextAction ?? "WAIT";
+		const prUrl = meta.prUrl ?? null;
 		if (nextAction === "WAIT") {
 			await new Promise((resolve) => setTimeout(resolve, PR_MONITOR_WAIT_MS));
 			throw new Error("retry pr monitor after wait");

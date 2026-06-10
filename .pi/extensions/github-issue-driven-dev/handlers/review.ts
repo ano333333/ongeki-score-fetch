@@ -1,5 +1,6 @@
 import { DEFAULT_CONFIG, ISSUE_PATH, PLAN_PATH, REVIEW_FILE_PATH } from "../constants.ts";
 import { ensureDir, readTextIfExists, writeText } from "../io.ts";
+import type { LatestReviewDisposition } from "../meta.ts";
 import { saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
 import { runDelegatedAgent } from "../subagent.ts";
@@ -9,7 +10,7 @@ function countReviewRounds(reviewHistory: string): number {
 	return (reviewHistory.match(/^## Review Round /gm) ?? []).length;
 }
 
-function detectLatestReviewDisposition(reviewText: string): "ACCEPTED" | "REJECTED" | "UNKNOWN" {
+function detectLatestReviewDisposition(reviewText: string): LatestReviewDisposition {
 	const matches = Array.from(reviewText.matchAll(/REVIEW:\s*(ACCEPTED|REJECTED)/gim));
 	const last = matches.at(-1)?.[1]?.toUpperCase();
 	if (last === "ACCEPTED" || last === "REJECTED") return last;

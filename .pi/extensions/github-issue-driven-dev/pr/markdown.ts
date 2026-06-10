@@ -1,4 +1,4 @@
-import type { PrMonitorNextAction } from "../handlers/monitor-pr.ts";
+import type { PrMonitorNextAction } from "../meta.ts";
 import type { PrCheck, PullRequestView } from "./view.ts";
 import { createChecksSummary } from "./view.ts";
 

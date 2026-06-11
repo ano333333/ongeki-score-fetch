@@ -170,15 +170,26 @@ stateDiagram-v2
 ## 現在の制約
 
 - workflow の guard 分岐 API がないため、PR 監視後の詳細分岐は handler 内で `meta.json` に記録した次アクションで表現している
+- `.pi/workflows/github-issue-driven-dev/config.json` が存在する場合のみ、repo / issueLimit / agent 名 / formatter・linter・test 対象 / PR monitor 待機時間を上書きする
 
 ## 関連ファイル
 
 - `workflow.ts`: state 定義
 - `index.ts`: handler 登録と command 登録
+- `constants.ts`: workflow path と既定設定
+- `project-config.ts`: `config.json` 読み込みと既定値マージ
 - `handlers/select-issue.ts`
+- `handlers/commit.ts`
+- `handlers/create-pr.ts`
+- `handlers/monitor-pr.ts`
 - `handlers/verification.ts`
 - `handlers/review.ts`
-- `handlers/commit-pr.ts`
+- `prompts.ts`: follow-up user message 文面
+- `workflow-transition.ts`: throw による error 遷移用エラー型
+- `git.ts`: branch / push 補助
+- `review-history.ts`: `reviews/review.md` の追記管理
+- `pr/*.ts`: PR view / markdown / auto-reply / judgement 補助
 - `subagent.ts`: project agent 呼び出し
 - `working-tree.ts`: git status 要約と不要ファイル候補の抽出
-- `adrs/001.md`: 設計メモ
+- `adrs/001.md`: 初期 ADR
+- `adrs/002.md`: 現行構成の ADR

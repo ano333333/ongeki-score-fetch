@@ -1,8 +1,9 @@
-import { DEFAULT_CONFIG, ISSUE_PATH, PLAN_PATH, REVIEW_FILE_PATH } from "../constants.ts";
+import { ISSUE_PATH, PLAN_PATH, REVIEW_FILE_PATH } from "../constants.ts";
 import { ensureDir, readTextIfExists, writeText } from "../io.ts";
 import type { LatestReviewDisposition } from "../meta.ts";
 import { saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
+import { loadProjectConfig } from "../project-config.ts";
 import { appendReviewRound, detectLatestReviewDisposition } from "../review-history.ts";
 import { runDelegatedAgent } from "../subagent.ts";
 import { WorkflowErrorTransition } from "../workflow-transition.ts";
@@ -10,13 +11,14 @@ import { summarizeWorkingTreeStatus } from "../working-tree.ts";
 
 export function createReviewHandler(repoRoot: string, activeDir: string, reviewsDir: string) {
 	return async () => {
+		const config = await loadProjectConfig(repoRoot);
 		await ensureDir(reviewsDir);
 		const reviewFilePath = repoPath(repoRoot, REVIEW_FILE_PATH);
 		const reviewHistory = await readTextIfExists(reviewFilePath);
 		const workTreeSummary = await summarizeWorkingTreeStatus(repoRoot);
 		const reviewText = await runDelegatedAgent(
 			repoRoot,
-			DEFAULT_CONFIG.reviewAgent,
+			config.reviewAgent,
 			[
 				"選択中の issue workflow に対する現在の repository diff をレビューしてください。",
 				`Repository root: ${repoRoot}`,
@@ -40,7 +42,7 @@ export function createReviewHandler(repoRoot: string, activeDir: string, reviews
 		await saveMeta(repoRoot, {
 			latestReviewFile: REVIEW_FILE_PATH,
 			latestReviewDisposition: disposition,
-			reviewAgent: DEFAULT_CONFIG.reviewAgent,
+			reviewAgent: config.reviewAgent,
 			reviewUpdatedAt: new Date().toISOString(),
 		});
 		if (disposition !== "ACCEPTED") throw new WorkflowErrorTransition(`review rejected: see ${REVIEW_FILE_PATH}`);

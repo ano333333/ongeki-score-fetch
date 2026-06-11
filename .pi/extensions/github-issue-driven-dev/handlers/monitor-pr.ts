@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { runGhJson } from "../command.ts";
-import { DEFAULT_CONFIG, PR_MONITOR_PATH, PR_MONITOR_WAIT_MS, REVIEW_FILE_PATH } from "../constants.ts";
+import { PR_MONITOR_PATH, REVIEW_FILE_PATH } from "../constants.ts";
 import { ensureDir, readTextIfExists, writeText } from "../io.ts";
 import type { PrMonitorNextAction, WorkflowMeta } from "../meta.ts";
 import { loadMeta, saveMeta } from "../meta.ts";
@@ -11,6 +11,7 @@ import { judgePrFeedbackWithAgent } from "../pr/judgement.ts";
 import { createPrMonitorMarkdown, summarizeReviewFeedback } from "../pr/markdown.ts";
 import type { PrCheck, PullRequestStatusView, PullRequestView } from "../pr/view.ts";
 import { isClosedUnmergedPr, isPendingCheck } from "../pr/view.ts";
+import { loadProjectConfig } from "../project-config.ts";
 import { appendReviewRound } from "../review-history.ts";
 import { WorkflowErrorTransition } from "../workflow-transition.ts";
 export function parseIsoTimestamp(value: unknown): number | null {
@@ -57,6 +58,7 @@ export async function appendRejectedReviewFromPr(repoRoot: string, pr: PullReque
 
 export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 	return async () => {
+		const config = await loadProjectConfig(repoRoot);
 		const meta = await loadMeta(repoRoot);
 		const prUrl = meta.prUrl ?? null;
 		if (!prUrl) {
@@ -75,7 +77,7 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 		const hasCheckActivity = checks.length > 0;
 		const allChecksComplete = hasCheckActivity && checks.every((check) => !isPendingCheck(check));
 		const basePatch = {
-			prMonitorAgent: DEFAULT_CONFIG.prMonitorAgent,
+			prMonitorAgent: config.prMonitorAgent,
 			prMonitoredAt: new Date().toISOString(),
 			prMonitorPath: PR_MONITOR_PATH,
 		};
@@ -191,11 +193,12 @@ export function createPrMonitorHandler(repoRoot: string, activeDir: string) {
 
 export function createPrMonitorWaitHandler(pi: ExtensionAPI, repoRoot: string) {
 	return async () => {
+		const config = await loadProjectConfig(repoRoot);
 		const meta = await loadMeta(repoRoot);
 		const nextAction: PrMonitorNextAction = meta.prMonitorNextAction ?? "WAIT";
 		const prUrl = meta.prUrl ?? null;
 		if (nextAction === "WAIT") {
-			await new Promise((resolve) => setTimeout(resolve, PR_MONITOR_WAIT_MS));
+			await new Promise((resolve) => setTimeout(resolve, config.prMonitorWaitMs));
 			throw new WorkflowErrorTransition("retry pr monitor after wait");
 		}
 		if (nextAction === "COMPLETED") {

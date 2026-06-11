@@ -1,16 +1,18 @@
-import { COMMITS_PATH, DEFAULT_CONFIG, ISSUE_PATH, PLAN_PATH, REVIEW_FILE_PATH } from "../constants.ts";
+import { COMMITS_PATH, ISSUE_PATH, PLAN_PATH, REVIEW_FILE_PATH } from "../constants.ts";
 import { writeText } from "../io.ts";
 import { saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
+import { loadProjectConfig } from "../project-config.ts";
 import { runDelegatedAgent } from "../subagent.ts";
 import { summarizeWorkingTreeStatus } from "../working-tree.ts";
 
 export function createCommitHandler(repoRoot: string, activeDir: string) {
 	return async () => {
+		const config = await loadProjectConfig(repoRoot);
 		const workTreeSummary = await summarizeWorkingTreeStatus(repoRoot);
 		const commitText = await runDelegatedAgent(
 			repoRoot,
-			DEFAULT_CONFIG.commitAgent,
+			config.commitAgent,
 			[
 				"現在の workflow 変更を、意味のある単位の git commit にまとめてください。",
 				`Repository root: ${repoRoot}`,
@@ -23,7 +25,7 @@ export function createCommitHandler(repoRoot: string, activeDir: string) {
 			].join("\n\n"),
 		);
 		await writeText(repoPath(repoRoot, COMMITS_PATH), `${commitText.trimEnd()}\n`);
-		await saveMeta(repoRoot, { commitsRecordedAt: new Date().toISOString(), commitAgent: DEFAULT_CONFIG.commitAgent });
+		await saveMeta(repoRoot, { commitsRecordedAt: new Date().toISOString(), commitAgent: config.commitAgent });
 		return { commitsPath: COMMITS_PATH };
 	};
 }

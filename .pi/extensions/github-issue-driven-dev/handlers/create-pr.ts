@@ -1,14 +1,16 @@
 import { runGhJson } from "../command.ts";
-import { COMMITS_PATH, DEFAULT_CONFIG, ISSUE_PATH, PLAN_PATH, PR_PATH, REVIEW_FILE_PATH } from "../constants.ts";
+import { COMMITS_PATH, ISSUE_PATH, PLAN_PATH, PR_PATH, REVIEW_FILE_PATH } from "../constants.ts";
 import { pushCurrentBranch } from "../git.ts";
 import { writeText } from "../io.ts";
 import { loadMeta, saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
 import { findOpenPrForCurrentBranch, isOpenPr } from "../pr/view.ts";
+import { loadProjectConfig } from "../project-config.ts";
 import { runDelegatedAgent } from "../subagent.ts";
 
 export function createPrHandler(repoRoot: string, activeDir: string) {
 	return async () => {
+		const config = await loadProjectConfig(repoRoot);
 		const reuseExistingPr = async (prUrl: string, reason: string) => {
 			const pushedBranch = await pushCurrentBranch(repoRoot);
 			await writeText(repoPath(repoRoot, PR_PATH), `PR_URL: ${prUrl}\n\n${reason}branch ${pushedBranch} を push しました。\n`);
@@ -20,7 +22,7 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 				prWorkflowCompletedAt: null,
 				prMonitorDisposition: undefined,
 				prMonitorNextAction: undefined,
-				prAgent: DEFAULT_CONFIG.prAgent,
+				prAgent: config.prAgent,
 			});
 			return { prPath: PR_PATH, prUrl, skipped: true, pushedBranch };
 		};
@@ -53,7 +55,7 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 
 		const prText = await runDelegatedAgent(
 			repoRoot,
-			DEFAULT_CONFIG.prAgent,
+			config.prAgent,
 			[
 				"現在の branch について gh を使って pull request を作成してください。",
 				`Repository root: ${repoRoot}`,
@@ -71,7 +73,7 @@ export function createPrHandler(repoRoot: string, activeDir: string) {
 			prWorkflowCompletedAt: null,
 			prMonitorDisposition: undefined,
 			prMonitorNextAction: undefined,
-			prAgent: DEFAULT_CONFIG.prAgent,
+			prAgent: config.prAgent,
 		});
 		if (!urlMatch?.[1]) throw new Error(`PR URL not found in ${PR_PATH}`);
 		return { prPath: PR_PATH, prUrl: urlMatch[1] };

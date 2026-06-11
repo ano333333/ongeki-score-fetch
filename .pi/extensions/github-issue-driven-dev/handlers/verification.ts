@@ -1,8 +1,9 @@
 import { runCommandStreaming } from "../command.ts";
-import { FORMATTER_LOG_PATH, FORMATTER_TARGETS, LINTER_LOG_PATH, LINTER_TARGETS, TEST_LOG_PATH, TEST_TARGETS } from "../constants.ts";
+import { FORMATTER_LOG_PATH, LINTER_LOG_PATH, TEST_LOG_PATH } from "../constants.ts";
 import { writeText } from "../io.ts";
 import { saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
+import { loadProjectConfig } from "../project-config.ts";
 import type { CommandResult, WorkflowFunctionContext } from "../types.ts";
 import { WorkflowErrorTransition } from "../workflow-transition.ts";
 
@@ -89,7 +90,8 @@ async function runTargetsAndLog(
 
 export function createFormatterHandler(repoRoot: string) {
 	return async (_input: unknown, context?: WorkflowFunctionContext) => {
-		const result = await runTargetsAndLog(repoRoot, repoPath(repoRoot, FORMATTER_LOG_PATH), "formatter", FORMATTER_TARGETS, context);
+		const config = await loadProjectConfig(repoRoot);
+		const result = await runTargetsAndLog(repoRoot, repoPath(repoRoot, FORMATTER_LOG_PATH), "formatter", config.formatterTargets, context);
 		await saveMeta(repoRoot, { formatterExitCode: result.exitCode, formatterRanAt: new Date().toISOString() });
 		if (result.exitCode !== 0) throw new Error(`formatter failed: see ${FORMATTER_LOG_PATH}`);
 		return { logPath: FORMATTER_LOG_PATH };
@@ -98,7 +100,8 @@ export function createFormatterHandler(repoRoot: string) {
 
 export function createLinterHandler(repoRoot: string) {
 	return async (_input: unknown, context?: WorkflowFunctionContext) => {
-		const result = await runTargetsAndLog(repoRoot, repoPath(repoRoot, LINTER_LOG_PATH), "linter", LINTER_TARGETS, context);
+		const config = await loadProjectConfig(repoRoot);
+		const result = await runTargetsAndLog(repoRoot, repoPath(repoRoot, LINTER_LOG_PATH), "linter", config.linterTargets, context);
 		await saveMeta(repoRoot, { linterExitCode: result.exitCode, linterRanAt: new Date().toISOString() });
 		if (result.exitCode !== 0) throw new WorkflowErrorTransition(`linter failed: see ${LINTER_LOG_PATH}`);
 		return { logPath: LINTER_LOG_PATH };
@@ -107,7 +110,8 @@ export function createLinterHandler(repoRoot: string) {
 
 export function createTestHandler(repoRoot: string) {
 	return async (_input: unknown, context?: WorkflowFunctionContext) => {
-		const result = await runTargetsAndLog(repoRoot, repoPath(repoRoot, TEST_LOG_PATH), "test", TEST_TARGETS, context);
+		const config = await loadProjectConfig(repoRoot);
+		const result = await runTargetsAndLog(repoRoot, repoPath(repoRoot, TEST_LOG_PATH), "test", config.testTargets, context);
 		await saveMeta(repoRoot, { testExitCode: result.exitCode, testRanAt: new Date().toISOString() });
 		if (result.exitCode !== 0) throw new WorkflowErrorTransition(`test failed: see ${TEST_LOG_PATH}`);
 		return { logPath: TEST_LOG_PATH };

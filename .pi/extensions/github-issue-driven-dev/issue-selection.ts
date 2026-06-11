@@ -1,9 +1,9 @@
 import { runCommand, runGhJson } from "./command.ts";
-import { DEFAULT_CONFIG } from "./constants.ts";
+import type { ProjectConfig } from "./project-config.ts";
 import type { GhIssue, SelectedIssue, SelectionRequestInfo } from "./types.ts";
 
-export async function listOpenIssues(cwd: string): Promise<{ repo: string; issues: GhIssue[] }> {
-	const repo = DEFAULT_CONFIG.repo ?? (await inferRepoFromOrigin(cwd));
+export async function listOpenIssues(cwd: string, config: ProjectConfig): Promise<{ repo: string; issues: GhIssue[] }> {
+	const repo = config.repo ?? (await inferRepoFromOrigin(cwd));
 	const issues = await runGhJson<GhIssue[]>(
 		[
 			"issue",
@@ -13,7 +13,7 @@ export async function listOpenIssues(cwd: string): Promise<{ repo: string; issue
 			"--state",
 			"open",
 			"--limit",
-			String(DEFAULT_CONFIG.issueLimit),
+			String(config.issueLimit),
 			"--json",
 			"number,title,body,url,labels,assignees,updatedAt",
 		],

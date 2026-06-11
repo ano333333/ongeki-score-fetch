@@ -21,6 +21,7 @@ export const REVIEW_FILE_PATH = `${REVIEWS_DIR}/review.md`;
 export const ISSUE_CANDIDATES_PATH = `${ACTIVE_RUN_DIR}/ISSUES.md`;
 export const SELECTION_REQUEST_PATH = `${ACTIVE_RUN_DIR}/REQUEST.md`;
 export const PENDING_SELECTION_REQUEST_PATH = `${WORKFLOW_ROOT}/start-request.txt`;
+export const CONFIG_PATH = `${WORKFLOW_ROOT}/config.json`;
 
 export const DEFAULT_CONFIG = {
 	repo: undefined as string | undefined,

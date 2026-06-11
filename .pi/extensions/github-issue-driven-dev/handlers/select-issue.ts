@@ -1,6 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
-	DEFAULT_CONFIG,
 	ISSUE_CANDIDATES_PATH,
 	ISSUE_PATH,
 	META_PATH,
@@ -19,15 +18,17 @@ import {
 } from "../issue-selection.ts";
 import { saveMeta } from "../meta.ts";
 import { repoPath } from "../paths.ts";
+import { loadProjectConfig } from "../project-config.ts";
 
 export function createSelectIssueHandler(pi: ExtensionAPI, repoRoot: string, activeDir: string) {
 	const reviewsDir = repoPath(repoRoot, REVIEWS_DIR);
 	const pendingRequestPath = repoPath(repoRoot, PENDING_SELECTION_REQUEST_PATH);
 	return async () => {
+		const config = await loadProjectConfig(repoRoot);
 		const requestText = (await readTextIfExists(pendingRequestPath)).trim();
 		await resetDir(activeDir);
 		await ensureDir(reviewsDir);
-		const { repo, issues } = await listOpenIssues(repoRoot);
+		const { repo, issues } = await listOpenIssues(repoRoot, config);
 		const parsedRequest = parseSelectionRequest(requestText);
 		const saveSelectionMeta = async () =>
 			await saveMeta(repoRoot, {
@@ -37,10 +38,10 @@ export function createSelectIssueHandler(pi: ExtensionAPI, repoRoot: string, act
 				issueNumber: null,
 				issueTitle: null,
 				issueUrl: null,
-				reviewAgent: DEFAULT_CONFIG.reviewAgent,
-				commitAgent: DEFAULT_CONFIG.commitAgent,
-				prAgent: DEFAULT_CONFIG.prAgent,
-				prMonitorAgent: DEFAULT_CONFIG.prMonitorAgent,
+				reviewAgent: config.reviewAgent,
+				commitAgent: config.commitAgent,
+				prAgent: config.prAgent,
+				prMonitorAgent: config.prMonitorAgent,
 				selectionRequestedAt: new Date().toISOString(),
 				selectionRequest: requestText || null,
 				selectionRequestedIssueNumber: parsedRequest.explicitIssueNumber,

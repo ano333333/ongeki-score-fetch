@@ -1,4 +1,5 @@
-import { DEFAULT_CONFIG, REVIEW_FILE_PATH } from "../constants.ts";
+import { REVIEW_FILE_PATH } from "../constants.ts";
+import { loadProjectConfig } from "../project-config.ts";
 import { runDelegatedAgent } from "../subagent.ts";
 import type { FingerprintItem } from "./fingerprint.ts";
 import { summarizeFingerprintItems } from "./fingerprint.ts";
@@ -11,9 +12,10 @@ export async function judgePrFeedbackWithAgent(
 	previousItems: FingerprintItem[],
 	changedItems: FingerprintItem[],
 ): Promise<{ decision: "USER_CONFIRM" | "REVIEW_REJECTED"; replyNeeded: boolean; note: string }> {
+	const config = await loadProjectConfig(repoRoot);
 	const monitorText = await runDelegatedAgent(
 		repoRoot,
-		DEFAULT_CONFIG.prMonitorAgent,
+		config.prMonitorAgent,
 		[
 			"現在の PR 監視について、人手レビューが必要かを自然言語で判定してください。",
 			`Repository root: ${repoRoot}`,
